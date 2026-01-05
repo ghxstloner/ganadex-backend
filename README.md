@@ -57,6 +57,45 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+## Auth (Register / Login)
+
+### Environment variables
+
+```bash
+JWT_ACCESS_SECRET=your-secret
+JWT_ACCESS_EXPIRES_IN=15m
+DATABASE_URL="mysql://user:pass@host:3306/dbname"
+```
+
+### Endpoints
+
+```bash
+# Register (creates user and optional empresa relation)
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "nombre": "Nombre Apellido",
+    "telefono": "5551234",
+    "password": "supersecret",
+    "empresa_id": "1"
+  }'
+
+# Login
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "supersecret"
+  }'
+```
+
+### Notes
+
+- `usuarios.password_hash` must be set for login (users without password are rejected).
+- `usuario_empresas.id_rol` is required; ensure at least one `roles` row exists before registering with `empresa_id` or `empresa_nombre`.
+- Refresh tokens are not implemented yet (TODOs are in the auth service).
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
