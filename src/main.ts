@@ -19,6 +19,7 @@ async function bootstrap() {
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
+      errorHttpStatusCode: 422,
     }),
   );
   await app.listen(process.env.PORT ?? 3000);

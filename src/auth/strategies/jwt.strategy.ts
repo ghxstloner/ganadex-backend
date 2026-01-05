@@ -16,7 +16,7 @@ export class JwtStrategy {
     try {
       return await this.jwtService.verifyAsync<JwtPayload>(token);
     } catch {
-      throw new UnauthorizedException('Token inválido');
+      throw new UnauthorizedException('Token invalido');
     }
   }
 }

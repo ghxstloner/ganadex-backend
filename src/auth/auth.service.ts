@@ -4,18 +4,31 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { parseBigInt } from '../common/utils/parse-bigint';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenancyService } from '../tenancy/tenancy.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
-type EmpresaResponse = {
-  id: string;
-  nombre: string;
-  rol_id?: string;
-  rol_nombre?: string;
+type SessionResponse = {
+  user: {
+    id: string;
+    email: string;
+    nombre: string;
+    telefono?: string | null;
+  };
+  empresas: {
+    id: string;
+    nombre: string;
+    logo_url: string | null;
+    rol_id?: string | null;
+    rol_nombre?: string | null;
+  }[];
+  empresa_activa_id: string | null;
 };
 
 @Injectable()
@@ -25,6 +38,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly tenancyService: TenancyService,
   ) {
     this.jwtSecret = process.env.JWT_ACCESS_SECRET ?? '';
     if (!this.jwtSecret) {
@@ -40,7 +54,7 @@ export class AuthService {
     });
 
     if (existing) {
-      throw new ConflictException('El correo ya está registrado');
+      throw new ConflictException('El correo ya esta registrado');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -55,7 +69,7 @@ export class AuthService {
       },
     });
 
-    const empresas: EmpresaResponse[] = [];
+    const empresas: SessionResponse['empresas'] = [];
 
     if (dto.empresa_id || dto.empresa_nombre) {
       const empresa = await this.resolveEmpresa(dto.empresa_id, dto.empresa_nombre);
@@ -73,6 +87,7 @@ export class AuthService {
       empresas.push({
         id: empresa.id_empresa.toString(),
         nombre: empresa.nombre,
+        logo_url: null,
         rol_id: rol.id_rol.toString(),
         rol_nombre: rol.nombre,
       });
@@ -100,47 +115,33 @@ export class AuthService {
     });
 
     if (!user || !user.activo || !user.password_hash) {
-      throw new UnauthorizedException('Credenciales inválidas');
+      throw new UnauthorizedException('Credenciales invalidas');
     }
 
     const passwordValid = await bcrypt.compare(dto.password, user.password_hash);
     if (!passwordValid) {
-      throw new UnauthorizedException('Credenciales inválidas');
+      throw new UnauthorizedException('Credenciales invalidas');
     }
 
-    const relaciones = await this.prisma.usuario_empresas.findMany({
-      where: {
-        id_usuario: user.id_usuario,
-        estado: 'activo',
-      },
-      include: {
-        empresas: true,
-        roles: true,
-      },
-    });
-
-    const empresas = relaciones.map((rel) => ({
-      id: rel.empresas.id_empresa.toString(),
-      nombre: rel.empresas.nombre,
-      rol_id: rel.roles?.id_rol?.toString(),
-      rol_nombre: rel.roles?.nombre,
-    }));
-
-    const empresaActivaSugerida =
-      empresas.length === 1 ? empresas[0].id : null;
+    const session = await this.buildSession(user.id_usuario);
 
     const accessToken = await this.signToken(user.id_usuario, email);
 
     return {
-      user: {
-        id: user.id_usuario.toString(),
-        email: user.email,
-        nombre: user.nombre,
-      },
-      empresas,
-      empresa_activa_sugerida: empresaActivaSugerida,
+      ...session,
       access_token: accessToken,
     };
+  }
+
+  async getSession(userId: bigint): Promise<SessionResponse> {
+    return this.buildSession(userId);
+  }
+
+  async setActiveEmpresa(userId: bigint, empresaId: string) {
+    const parsedEmpresaId = parseBigInt(empresaId, 'empresa_id');
+    await this.tenancyService.assertEmpresaBelongs(userId, parsedEmpresaId);
+    await this.tenancyService.setActiveEmpresa(userId, parsedEmpresaId);
+    return this.buildSession(userId);
   }
 
   private async signToken(userId: bigint, email: string) {
@@ -156,7 +157,7 @@ export class AuthService {
     empresaNombre?: string,
   ) {
     if (empresaId) {
-      const parsedId = this.parseBigInt(empresaId, 'empresa_id');
+      const parsedId = parseBigInt(empresaId, 'empresa_id');
       const empresa = await this.prisma.empresas.findUnique({
         where: { id_empresa: parsedId },
       });
@@ -167,7 +168,7 @@ export class AuthService {
     }
 
     if (!empresaNombre) {
-      throw new BadRequestException('Datos de empresa requeridos');
+      throw new UnprocessableEntityException('Datos de empresa requeridos');
     }
 
     return this.prisma.empresas.create({
@@ -199,11 +200,41 @@ export class AuthService {
     return fallback;
   }
 
-  private parseBigInt(value: string, field: string) {
-    try {
-      return BigInt(value);
-    } catch {
-      throw new BadRequestException(`${field} inválido`);
+  private async buildSession(userId: bigint): Promise<SessionResponse> {
+    const user = await this.prisma.usuarios.findUnique({
+      where: { id_usuario: userId },
+    });
+
+    if (!user || !user.activo) {
+      throw new UnauthorizedException('Token invalido');
     }
+
+    const empresas = await this.tenancyService.getUserEmpresas(userId);
+    let empresaActivaId = await this.tenancyService.getActiveEmpresaId(userId);
+
+    if (
+      empresaActivaId &&
+      !empresas.some((empresa) => empresa.id === empresaActivaId)
+    ) {
+      await this.tenancyService.clearActiveEmpresa(userId);
+      empresaActivaId = null;
+    }
+
+    if (!empresaActivaId && empresas.length === 1) {
+      const selected = BigInt(empresas[0].id);
+      await this.tenancyService.setActiveEmpresa(userId, selected);
+      empresaActivaId = empresas[0].id;
+    }
+
+    return {
+      user: {
+        id: user.id_usuario.toString(),
+        email: user.email,
+        nombre: user.nombre,
+        telefono: user.telefono ?? null,
+      },
+      empresas,
+      empresa_activa_id: empresaActivaId,
+    };
   }
 }

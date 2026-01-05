@@ -947,6 +947,7 @@ model usuario_empresas {
   id_empresa BigInt   @db.UnsignedBigInt
   id_rol     BigInt   @db.UnsignedBigInt
   estado     String   @default("activo") @db.VarChar(20)
+  es_activa  Boolean  @default(false)
   created_at DateTime @default(now()) @db.Timestamp(0)
   empresas   empresas @relation(fields: [id_empresa], references: [id_empresa], onDelete: Cascade, map: "fk_ue_empresa")
   roles      roles    @relation(fields: [id_rol], references: [id_rol], map: "fk_ue_rol")
@@ -976,7 +977,7 @@ model usuario_fincas {
 
 model usuarios {
   id_usuario                BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
-  email                     String                      @unique(map: "uq_usuarios_email") @db.VarChar(254)
+  email                     String                      @unique(map: "uq_usuarios_email") @db.VarChar(190)
   nombre                    String                      @db.VarChar(120)
   telefono                  String?                     @db.VarChar(40)
   password_hash             String?                     @db.VarChar(255)
