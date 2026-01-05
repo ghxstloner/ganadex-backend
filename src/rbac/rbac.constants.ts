@@ -1,0 +1,16 @@
+export const OWNER_ROLE_CODE = 'owner';
+export const ADMIN_ROLE_CODE = 'admin';
+
+export const RBAC_PERMISSION_CODES = [
+  'PERFIL_LEER',
+  'PERMISOS_LEER',
+  'ROLES_LEER',
+  'ROLES_CREAR',
+  'ROLES_EDITAR',
+  'ROLES_ELIMINAR',
+  'USUARIOS_LEER',
+  'USUARIOS_CREAR',
+  'USUARIOS_EDITAR',
+  'USUARIOS_CAMBIAR_ROL',
+  'USUARIOS_ELIMINAR',
+] as const;

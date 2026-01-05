@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ensureEmpresaBaseRoles } from '../rbac/rbac.bootstrap';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { EmpresaCreateDto } from './dto/empresa-create.dto';
 import { EmpresaUpdateDto } from './dto/empresa-update.dto';
@@ -29,13 +30,16 @@ export class EmpresasService {
       },
     });
 
-    const rol = await this.resolveOwnerRol();
+    const { ownerRoleId } = await ensureEmpresaBaseRoles(
+      this.prisma,
+      empresa.id_empresa,
+    );
 
     await this.prisma.usuario_empresas.create({
       data: {
         id_usuario: userId,
         id_empresa: empresa.id_empresa,
-        id_rol: rol.id_rol,
+        id_rol: ownerRoleId,
         estado: 'activo',
       },
     });
@@ -84,31 +88,5 @@ export class EmpresasService {
     };
   }
 
-  private async resolveOwnerRol() {
-    const owner = await this.prisma.roles.findFirst({
-      where: { codigo: 'owner' },
-    });
 
-    if (owner) {
-      return owner;
-    }
-
-    const admin = await this.prisma.roles.findFirst({
-      where: { codigo: 'admin' },
-    });
-
-    if (admin) {
-      return admin;
-    }
-
-    const fallback = await this.prisma.roles.findFirst({
-      orderBy: { id_rol: 'asc' },
-    });
-
-    if (!fallback) {
-      throw new NotFoundException('No hay roles disponibles');
-    }
-
-    return fallback;
-  }
 }

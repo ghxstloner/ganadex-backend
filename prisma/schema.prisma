@@ -234,6 +234,7 @@ model empresas {
   razas                     razas[]
   recordatorios             recordatorios[]
   resultados_palpacion      resultados_palpacion[]
+  roles                     roles[]
   tasas_cambio              tasas_cambio[]
   tipos_adjunto             tipos_adjunto[]
   tipos_evento_reproductivo tipos_evento_reproductivo[]
@@ -745,19 +746,27 @@ model retiros {
 }
 
 model roles {
-  id_rol           BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
-  id_ambito_rol    BigInt             @db.UnsignedBigInt
-  codigo           String             @unique(map: "uq_roles_codigo") @db.VarChar(50)
-  nombre           String             @db.VarChar(120)
-  descripcion      String?            @db.Text
-  activo           Boolean            @default(true)
-  ambitos_rol      ambitos_rol        @relation(fields: [id_ambito_rol], references: [id_ambito_rol], map: "fk_roles_ambito")
+  id_rol        BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id    BigInt?     @db.UnsignedBigInt
+  id_ambito_rol BigInt      @db.UnsignedBigInt
+  codigo        String      @db.VarChar(50)
+  nombre        String      @db.VarChar(120)
+  descripcion   String?     @db.Text
+  activo        Boolean     @default(true)
+
+  ambitos_rol   ambitos_rol @relation(fields: [id_ambito_rol], references: [id_ambito_rol], map: "fk_roles_ambito")
+  empresas      empresas?   @relation(fields: [empresa_id], references: [id_empresa], onDelete: Cascade, map: "fk_roles_empresa")
+
   roles_permisos   roles_permisos[]
   usuario_empresas usuario_empresas[]
   usuario_fincas   usuario_fincas[]
 
   @@index([id_ambito_rol], map: "idx_roles_ambito")
+  @@index([empresa_id], map: "idx_roles_empresa")
+  @@unique([empresa_id, codigo], map: "uq_roles_empresa_codigo")
+  @@unique([empresa_id, nombre], map: "uq_roles_empresa_nombre")
 }
+
 
 model roles_permisos {
   id_rol     BigInt   @db.UnsignedBigInt

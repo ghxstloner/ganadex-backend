@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -11,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { parseBigInt } from '../common/utils/parse-bigint';
 import { PrismaService } from '../prisma/prisma.service';
 import { TenancyService } from '../tenancy/tenancy.service';
+import { ensureEmpresaBaseRoles } from '../rbac/rbac.bootstrap';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -72,14 +72,24 @@ export class AuthService {
     const empresas: SessionResponse['empresas'] = [];
 
     if (dto.empresa_id || dto.empresa_nombre) {
-      const empresa = await this.resolveEmpresa(dto.empresa_id, dto.empresa_nombre);
-      const rol = await this.resolveDefaultRol();
+      const { empresa, created } = await this.resolveEmpresa(
+        dto.empresa_id,
+        dto.empresa_nombre,
+      );
+      const { ownerRoleId, adminRoleId } = await ensureEmpresaBaseRoles(
+        this.prisma,
+        empresa.id_empresa,
+      );
+      const roleId = created ? ownerRoleId : adminRoleId;
+      const role = await this.prisma.roles.findUnique({
+        where: { id_rol: roleId },
+      });
 
       await this.prisma.usuario_empresas.create({
         data: {
           id_usuario: createdUser.id_usuario,
           id_empresa: empresa.id_empresa,
-          id_rol: rol.id_rol,
+          id_rol: roleId,
           estado: 'activo',
         },
       });
@@ -88,8 +98,8 @@ export class AuthService {
         id: empresa.id_empresa.toString(),
         nombre: empresa.nombre,
         logo_url: null,
-        rol_id: rol.id_rol.toString(),
-        rol_nombre: rol.nombre,
+        rol_id: roleId.toString(),
+        rol_nombre: role?.nombre ?? null,
       });
     }
 
@@ -124,8 +134,16 @@ export class AuthService {
     }
 
     const session = await this.buildSession(user.id_usuario);
+    const shouldClearActive = session.empresas.length > 1;
+    const accessToken = await this.signToken(
+      user.id_usuario,
+      email,
+      shouldClearActive ? null : session.empresa_activa_id,
+    );
 
-    const accessToken = await this.signToken(user.id_usuario, email);
+    if (shouldClearActive) {
+      session.empresa_activa_id = null;
+    }
 
     return {
       ...session,
@@ -141,21 +159,29 @@ export class AuthService {
     const parsedEmpresaId = parseBigInt(empresaId, 'empresa_id');
     await this.tenancyService.assertEmpresaBelongs(userId, parsedEmpresaId);
     await this.tenancyService.setActiveEmpresa(userId, parsedEmpresaId);
-    return this.buildSession(userId);
+    const session = await this.buildSession(userId);
+    const accessToken = await this.signToken(userId, session.user.email);
+    return { ...session, access_token: accessToken };
   }
 
-  private async signToken(userId: bigint, email: string) {
+  private async signToken(
+    userId: bigint,
+    email: string,
+    empresaActivaId?: string | null,
+  ) {
+    const activeId =
+      empresaActivaId !== undefined
+        ? empresaActivaId
+        : await this.tenancyService.getActiveEmpresaId(userId);
     return this.jwtService.signAsync({
       sub: userId.toString(),
       email,
+      empresa_activa_id: activeId ?? undefined,
       // TODO: Include empresa activa when refresh tokens/session model exists.
     });
   }
 
-  private async resolveEmpresa(
-    empresaId?: string,
-    empresaNombre?: string,
-  ) {
+  private async resolveEmpresa(empresaId?: string, empresaNombre?: string) {
     if (empresaId) {
       const parsedId = parseBigInt(empresaId, 'empresa_id');
       const empresa = await this.prisma.empresas.findUnique({
@@ -164,40 +190,20 @@ export class AuthService {
       if (!empresa) {
         throw new NotFoundException('Empresa no encontrada');
       }
-      return empresa;
+      return { empresa, created: false };
     }
 
     if (!empresaNombre) {
       throw new UnprocessableEntityException('Datos de empresa requeridos');
     }
 
-    return this.prisma.empresas.create({
+    const empresa = await this.prisma.empresas.create({
       data: {
         nombre: empresaNombre,
       },
     });
-  }
 
-  private async resolveDefaultRol() {
-    const adminRole = await this.prisma.roles.findFirst({
-      where: { codigo: 'admin' },
-    });
-
-    if (adminRole) {
-      return adminRole;
-    }
-
-    const fallback = await this.prisma.roles.findFirst({
-      orderBy: { id_rol: 'asc' },
-    });
-
-    if (!fallback) {
-      throw new BadRequestException(
-        'No hay roles disponibles para asignar al usuario',
-      );
-    }
-
-    return fallback;
+    return { empresa, created: true };
   }
 
   private async buildSession(userId: bigint): Promise<SessionResponse> {

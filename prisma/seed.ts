@@ -51,24 +51,6 @@ async function main() {
     ON DUPLICATE KEY UPDATE nombre=VALUES(nombre);
   `)
 
-  // 3. Roles (Depende de Ambitos)
-  // Nota: Prisma Raw maneja bien el INSERT INTO SELECT
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO roles (id_ambito_rol, codigo, nombre, descripcion, activo)
-    SELECT ar.id_ambito_rol, 'admin_empresa', 'Administrador (Empresa)', 'Acceso total a nivel empresa', 1
-    FROM ambitos_rol ar
-    WHERE ar.codigo='empresa'
-    ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), descripcion=VALUES(descripcion), activo=VALUES(activo);
-  `)
-
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO roles (id_ambito_rol, codigo, nombre, descripcion, activo)
-    SELECT ar.id_ambito_rol, 'admin_finca', 'Administrador (Finca)', 'Acceso total a nivel finca', 1
-    FROM ambitos_rol ar
-    WHERE ar.codigo='finca'
-    ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), descripcion=VALUES(descripcion), activo=VALUES(activo);
-  `)
-
   // 4. Tipos Transacción
   await prisma.$executeRawUnsafe(`
     INSERT INTO tipos_transaccion (empresa_id, codigo, nombre) VALUES
@@ -201,7 +183,26 @@ async function main() {
     ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), orden=VALUES(orden);
   `)
 
-  console.log('✅ Sembrado completado correctamente.')
+  // 17. Permisos globales (RBAC)
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO permisos (codigo, nombre, descripcion) VALUES
+      ('PERFIL_LEER','Ver perfil','Acceder al perfil propio'),
+      ('PERMISOS_LEER','Ver permisos','Listar catalogo de permisos'),
+      ('ROLES_LEER','Ver roles','Listar roles de la empresa'),
+      ('ROLES_CREAR','Crear roles','Crear roles en la empresa'),
+      ('ROLES_EDITAR','Editar roles','Editar roles y permisos'),
+      ('ROLES_ELIMINAR','Eliminar roles','Eliminar roles de la empresa'),
+      ('USUARIOS_LEER','Ver usuarios','Listar usuarios de la empresa'),
+      ('USUARIOS_CREAR','Crear usuarios','Invitar o crear usuarios'),
+      ('USUARIOS_EDITAR','Editar usuarios','Editar datos del usuario'),
+      ('USUARIOS_CAMBIAR_ROL','Cambiar rol','Asignar roles a usuarios'),
+      ('USUARIOS_ELIMINAR','Eliminar usuarios','Remover usuarios de la empresa')
+    ON DUPLICATE KEY UPDATE
+      nombre=VALUES(nombre),
+      descripcion=VALUES(descripcion);
+  `)
+
+  console.log('Sembrado completado correctamente.')
 }
 
 main()

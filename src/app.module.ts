@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { EmpresasModule } from './empresas/empresas.module';
 import { FincasModule } from './fincas/fincas.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RbacModule } from './rbac/rbac.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     EmpresasModule,
     FincasModule,
+    RbacModule,
   ],
   controllers: [AppController],
   providers: [AppService],
