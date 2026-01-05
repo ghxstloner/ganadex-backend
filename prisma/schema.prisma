@@ -1,0 +1,1036 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model adjuntos_transaccion {
+  id_adjunto                BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  id_transaccion            BigInt                    @db.UnsignedBigInt
+  id_tipo_adjunto           BigInt                    @db.UnsignedBigInt
+  url_archivo               String                    @db.VarChar(255)
+  notas                     String?                   @db.Text
+  created_at                DateTime                  @default(now()) @db.Timestamp(0)
+  tipos_adjunto             tipos_adjunto             @relation(fields: [id_tipo_adjunto], references: [id_tipo_adjunto], map: "fk_at_tipo")
+  transacciones_financieras transacciones_financieras @relation(fields: [id_transaccion], references: [id_transaccion], onDelete: Cascade, map: "fk_at_transaccion")
+
+  @@index([id_tipo_adjunto], map: "idx_at_tipo")
+  @@index([id_transaccion], map: "idx_at_transaccion")
+}
+
+model ambitos_rol {
+  id_ambito_rol BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  codigo        String  @unique(map: "uq_ambitos_rol_codigo") @db.VarChar(30)
+  nombre        String  @db.VarChar(80)
+  roles         roles[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model animal_categorias_historial {
+  id_hist             BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id          BigInt              @db.UnsignedBigInt
+  id_animal           BigInt              @db.UnsignedBigInt
+  id_categoria_animal BigInt              @db.UnsignedBigInt
+  fecha_inicio        DateTime            @db.Date
+  fecha_fin           DateTime?           @db.Date
+  observaciones       String?             @db.Text
+  animales            animales            @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_ac_animal")
+  categorias_animales categorias_animales @relation(fields: [id_categoria_animal], references: [id_categoria_animal], map: "fk_ac_categoria")
+
+  @@index([id_animal, empresa_id, fecha_inicio], map: "idx_ac_animal")
+  @@index([id_categoria_animal], map: "idx_ac_categoria")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model animal_estados_historial {
+  id_hist          BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id       BigInt           @db.UnsignedBigInt
+  id_animal        BigInt           @db.UnsignedBigInt
+  id_estado_animal BigInt           @db.UnsignedBigInt
+  fecha_inicio     DateTime         @db.Date
+  fecha_fin        DateTime?        @db.Date
+  motivo           String?          @db.VarChar(255)
+  animales         animales         @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_ae_animal")
+  estados_animales estados_animales @relation(fields: [id_estado_animal], references: [id_estado_animal], map: "fk_ae_estado")
+
+  @@index([id_animal, empresa_id, fecha_inicio], map: "idx_ae_animal")
+  @@index([id_estado_animal], map: "idx_ae_estado")
+}
+
+model animal_identificaciones {
+  id_animal_identificacion BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id               BigInt               @db.UnsignedBigInt
+  id_animal                BigInt               @db.UnsignedBigInt
+  id_tipo_identificacion   BigInt               @db.UnsignedBigInt
+  valor                    String               @db.VarChar(120)
+  fecha_asignacion         DateTime             @db.Date
+  activo                   Boolean              @default(true)
+  observaciones            String?              @db.Text
+  animales                 animales             @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_ai_animal")
+  tipos_identificacion     tipos_identificacion @relation(fields: [id_tipo_identificacion], references: [id_tipo_identificacion], map: "fk_ai_tipo")
+
+  @@unique([empresa_id, id_tipo_identificacion, valor], map: "uq_ai_empresa_tipo_valor")
+  @@index([id_animal, empresa_id], map: "idx_ai_animal")
+  @@index([id_tipo_identificacion], map: "idx_ai_tipo")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model animales {
+  id_animal                                                                       BigInt                        @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                                                                      BigInt                        @db.UnsignedBigInt
+  id_finca                                                                        BigInt                        @db.UnsignedBigInt
+  nombre                                                                          String?                       @db.VarChar(120)
+  sexo                                                                            String                        @db.Char(1)
+  fecha_nacimiento                                                                DateTime?                     @db.Date
+  fecha_nacimiento_estimada                                                       Boolean                       @default(false)
+  id_raza                                                                         BigInt?                       @db.UnsignedBigInt
+  padre_id                                                                        BigInt?                       @db.UnsignedBigInt
+  madre_id                                                                        BigInt?                       @db.UnsignedBigInt
+  notas                                                                           String?                       @db.Text
+  created_at                                                                      DateTime                      @default(now()) @db.Timestamp(0)
+  updated_at                                                                      DateTime                      @default(now()) @db.Timestamp(0)
+  animal_categorias_historial                                                     animal_categorias_historial[]
+  animal_estados_historial                                                        animal_estados_historial[]
+  animal_identificaciones                                                         animal_identificaciones[]
+  fincas                                                                          fincas                        @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_animales_finca")
+  animales_animales_madre_id_empresa_idToanimales                                 animales?                     @relation("animales_madre_id_empresa_idToanimales", fields: [madre_id, empresa_id], references: [id_animal, empresa_id], map: "fk_animales_madre")
+  other_animales_animales_madre_id_empresa_idToanimales                           animales[]                    @relation("animales_madre_id_empresa_idToanimales")
+  animales_animales_padre_id_empresa_idToanimales                                 animales?                     @relation("animales_padre_id_empresa_idToanimales", fields: [padre_id, empresa_id], references: [id_animal, empresa_id], map: "fk_animales_padre")
+  other_animales_animales_padre_id_empresa_idToanimales                           animales[]                    @relation("animales_padre_id_empresa_idToanimales")
+  razas                                                                           razas?                        @relation(fields: [id_raza], references: [id_raza], map: "fk_animales_raza")
+  auditoria_detalle                                                               auditoria_detalle[]
+  eventos_reproductivos_eventos_reproductivos_id_animal_empresa_idToanimales      eventos_reproductivos[]       @relation("eventos_reproductivos_id_animal_empresa_idToanimales")
+  eventos_reproductivos_eventos_reproductivos_reproductor_id_empresa_idToanimales eventos_reproductivos[]       @relation("eventos_reproductivos_reproductor_id_empresa_idToanimales")
+  eventos_sanitarios                                                              eventos_sanitarios[]
+  lactancias                                                                      lactancias[]
+  movimientos_animales                                                            movimientos_animales[]
+  protocolo_ejecuciones                                                           protocolo_ejecuciones[]
+  recordatorios                                                                   recordatorios[]
+  tratamientos                                                                    tratamientos[]
+  vacunaciones                                                                    vacunaciones[]
+
+  @@id([id_animal, empresa_id])
+  @@index([id_finca, empresa_id], map: "idx_animales_finca")
+  @@index([madre_id, empresa_id], map: "idx_animales_madre")
+  @@index([padre_id, empresa_id], map: "idx_animales_padre")
+  @@index([id_raza], map: "idx_animales_raza")
+}
+
+model auditoria_detalle {
+  id_detalle             BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  id_auditoria           BigInt                @db.UnsignedBigInt
+  empresa_id             BigInt                @db.UnsignedBigInt
+  id_animal              BigInt?               @db.UnsignedBigInt
+  id_tipo_identificacion BigInt?               @db.UnsignedBigInt
+  valor_leido            String?               @db.VarChar(120)
+  encontrado             Boolean               @default(false)
+  incidencia             String?               @db.VarChar(50)
+  notas                  String?               @db.Text
+  animales               animales?             @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], map: "fk_adet_animal")
+  auditorias_inventario  auditorias_inventario @relation(fields: [id_auditoria], references: [id_auditoria], onDelete: Cascade, map: "fk_adet_auditoria")
+  empresas               empresas              @relation(fields: [empresa_id], references: [id_empresa], map: "fk_adet_empresa")
+  tipos_identificacion   tipos_identificacion? @relation(fields: [id_tipo_identificacion], references: [id_tipo_identificacion], map: "fk_adet_tipo")
+
+  @@index([empresa_id], map: "fk_adet_empresa")
+  @@index([id_tipo_identificacion], map: "fk_adet_tipo")
+  @@index([id_animal, empresa_id], map: "idx_adet_animal")
+  @@index([id_auditoria], map: "idx_adet_auditoria")
+}
+
+model auditorias_inventario {
+  id_auditoria        BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id          BigInt              @db.UnsignedBigInt
+  id_finca            BigInt              @db.UnsignedBigInt
+  fecha_apertura      DateTime            @db.DateTime(0)
+  fecha_cierre        DateTime?           @db.DateTime(0)
+  id_metodo_auditoria BigInt              @db.UnsignedBigInt
+  estado              String              @default("abierta") @db.VarChar(20)
+  observaciones       String?             @db.Text
+  created_by          BigInt?             @db.UnsignedBigInt
+  auditoria_detalle   auditoria_detalle[]
+  usuarios            usuarios?           @relation(fields: [created_by], references: [id_usuario], map: "fk_aud_created_by")
+  fincas              fincas              @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_aud_finca")
+  metodos_auditoria   metodos_auditoria   @relation(fields: [id_metodo_auditoria], references: [id_metodo_auditoria], map: "fk_aud_metodo")
+
+  @@index([created_by], map: "fk_aud_created_by")
+  @@index([id_metodo_auditoria], map: "fk_aud_metodo")
+  @@index([id_finca, empresa_id], map: "idx_aud_finca")
+}
+
+model categorias_animales {
+  id_categoria_animal         BigInt                        @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                  BigInt?                       @db.UnsignedBigInt
+  empresa_id_u                BigInt?                       @db.UnsignedBigInt
+  codigo                      String                        @db.VarChar(40)
+  nombre                      String                        @db.VarChar(120)
+  sexo_requerido              String?                       @db.Char(1)
+  activo                      Boolean                       @default(true)
+  orden                       Int                           @default(0)
+  animal_categorias_historial animal_categorias_historial[]
+  empresas                    empresas?                     @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_ca_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_ca_empresa_codigo")
+  @@index([empresa_id], map: "idx_ca_empresa")
+}
+
+model categorias_financieras {
+  id_categoria_financiera   BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                BigInt?                     @db.UnsignedBigInt
+  empresa_id_u              BigInt?                     @db.UnsignedBigInt
+  codigo                    String                      @db.VarChar(60)
+  nombre                    String                      @db.VarChar(140)
+  id_tipo_transaccion       BigInt                      @db.UnsignedBigInt
+  activo                    Boolean                     @default(true)
+  orden                     Int                         @default(0)
+  empresas                  empresas?                   @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_cf_empresa")
+  tipos_transaccion         tipos_transaccion           @relation(fields: [id_tipo_transaccion], references: [id_tipo_transaccion], map: "fk_cf_tipo_tx")
+  transacciones_financieras transacciones_financieras[]
+
+  @@unique([empresa_id_u, codigo], map: "uq_cf_empresa_codigo")
+  @@index([empresa_id], map: "idx_cf_empresa")
+  @@index([id_tipo_transaccion], map: "idx_cf_tipo_tx")
+}
+
+model centros_recepcion {
+  id_centro           BigInt                @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id          BigInt                @db.UnsignedBigInt
+  nombre              String                @db.VarChar(160)
+  contacto            String?               @db.VarChar(200)
+  telefono            String?               @db.VarChar(40)
+  notas               String?               @db.Text
+  empresas            empresas              @relation(fields: [empresa_id], references: [id_empresa], onDelete: Cascade, map: "fk_cr_empresa")
+  entregas_leche      entregas_leche[]
+  liquidaciones_leche liquidaciones_leche[]
+
+  @@id([id_centro, empresa_id])
+  @@unique([empresa_id, nombre], map: "uq_cr_empresa_nombre")
+}
+
+model empresas {
+  id_empresa                BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  nombre                    String                      @db.VarChar(160)
+  documento_fiscal          String?                     @db.VarChar(60)
+  estado                    String                      @default("activa") @db.VarChar(30)
+  plan_id                   BigInt?                     @db.UnsignedBigInt
+  notas                     String?                     @db.Text
+  created_at                DateTime                    @default(now()) @db.Timestamp(0)
+  updated_at                DateTime                    @default(now()) @db.Timestamp(0)
+  auditoria_detalle         auditoria_detalle[]
+  categorias_animales       categorias_animales[]
+  categorias_financieras    categorias_financieras[]
+  centros_recepcion         centros_recepcion[]
+  planes                    planes?                     @relation(fields: [plan_id], references: [id_plan], map: "fk_empresas_plan")
+  enfermedades              enfermedades[]
+  estados_animales          estados_animales[]
+  estados_productivos       estados_productivos[]
+  fincas                    fincas[]
+  medicamentos              medicamentos[]
+  metodos_auditoria         metodos_auditoria[]
+  motivos_movimiento        motivos_movimiento[]
+  protocolos                protocolos[]
+  razas                     razas[]
+  recordatorios             recordatorios[]
+  resultados_palpacion      resultados_palpacion[]
+  tasas_cambio              tasas_cambio[]
+  tipos_adjunto             tipos_adjunto[]
+  tipos_evento_reproductivo tipos_evento_reproductivo[]
+  tipos_identificacion      tipos_identificacion[]
+  tipos_potrero             tipos_potrero[]
+  tipos_recordatorio        tipos_recordatorio[]
+  tipos_retiro              tipos_retiro[]
+  tipos_transaccion         tipos_transaccion[]
+  transacciones_financieras transacciones_financieras[]
+  turnos_ordenio            turnos_ordenio[]
+  usuario_empresas          usuario_empresas[]
+  vacunaciones              vacunaciones[]
+  vacunas                   vacunas[]
+
+  @@index([plan_id], map: "idx_empresas_plan")
+}
+
+model enfermedades {
+  id_enfermedad      BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id         BigInt?              @db.UnsignedBigInt
+  empresa_id_u       BigInt?              @db.UnsignedBigInt
+  codigo             String               @db.VarChar(60)
+  nombre             String               @db.VarChar(140)
+  tipo               String?              @db.VarChar(40)
+  empresas           empresas?            @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_enf_empresa")
+  eventos_sanitarios eventos_sanitarios[]
+
+  @@unique([empresa_id_u, codigo], map: "uq_enf_empresa_codigo")
+  @@index([empresa_id], map: "idx_enf_empresa")
+}
+
+model entregas_leche {
+  id_entrega        BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id        BigInt            @db.UnsignedBigInt
+  id_finca          BigInt            @db.UnsignedBigInt
+  id_centro         BigInt            @db.UnsignedBigInt
+  fecha             DateTime          @db.Date
+  litros_entregados Decimal           @db.Decimal(12, 3)
+  referencia_guia   String?           @db.VarChar(120)
+  notas             String?           @db.Text
+  created_by        BigInt?           @db.UnsignedBigInt
+  created_at        DateTime          @default(now()) @db.Timestamp(0)
+  centros_recepcion centros_recepcion @relation(fields: [id_centro, empresa_id], references: [id_centro, empresa_id], map: "fk_el_centro")
+  usuarios          usuarios?         @relation(fields: [created_by], references: [id_usuario], map: "fk_el_created_by")
+  fincas            fincas            @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_el_finca")
+
+  @@index([id_centro, empresa_id, fecha], map: "idx_el_centro_fecha")
+  @@index([created_by], map: "idx_el_created_by")
+  @@index([id_finca, empresa_id, fecha], map: "idx_el_finca_fecha")
+}
+
+model estados_animales {
+  id_estado_animal         BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id               BigInt?                    @db.UnsignedBigInt
+  empresa_id_u             BigInt?                    @db.UnsignedBigInt
+  codigo                   String                     @db.VarChar(40)
+  nombre                   String                     @db.VarChar(120)
+  activo                   Boolean                    @default(true)
+  animal_estados_historial animal_estados_historial[]
+  empresas                 empresas?                  @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_ea_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_ea_empresa_codigo")
+  @@index([empresa_id], map: "idx_ea_empresa")
+}
+
+model estados_productivos {
+  id_estado_productivo BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id           BigInt?   @db.UnsignedBigInt
+  empresa_id_u         BigInt?   @db.UnsignedBigInt
+  codigo               String    @db.VarChar(60)
+  nombre               String    @db.VarChar(140)
+  activo               Boolean   @default(true)
+  orden                Int       @default(0)
+  empresas             empresas? @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_ep_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_ep_empresa_codigo")
+  @@index([empresa_id], map: "idx_ep_empresa")
+}
+
+model estados_recordatorio {
+  codigo        String          @id @db.VarChar(30)
+  nombre        String          @db.VarChar(60)
+  orden         Int             @default(0)
+  recordatorios recordatorios[]
+}
+
+model eventos_reproductivos {
+  id_evento_reproductivo                                             BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                                                         BigInt                    @db.UnsignedBigInt
+  id_animal                                                          BigInt                    @db.UnsignedBigInt
+  id_tipo_evento_reproductivo                                        BigInt                    @db.UnsignedBigInt
+  fecha                                                              DateTime                  @db.Date
+  detalles                                                           String?                   @db.Text
+  id_resultado_palpacion                                             BigInt?                   @db.UnsignedBigInt
+  reproductor_id                                                     BigInt?                   @db.UnsignedBigInt
+  reproductor_identificacion                                         String?                   @db.VarChar(120)
+  created_by                                                         BigInt?                   @db.UnsignedBigInt
+  created_at                                                         DateTime                  @default(now()) @db.Timestamp(0)
+  animales_eventos_reproductivos_id_animal_empresa_idToanimales      animales                  @relation("eventos_reproductivos_id_animal_empresa_idToanimales", fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_er_animal")
+  usuarios                                                           usuarios?                 @relation(fields: [created_by], references: [id_usuario], map: "fk_er_created_by")
+  animales_eventos_reproductivos_reproductor_id_empresa_idToanimales animales?                 @relation("eventos_reproductivos_reproductor_id_empresa_idToanimales", fields: [reproductor_id, empresa_id], references: [id_animal, empresa_id], map: "fk_er_reproductor")
+  resultados_palpacion                                               resultados_palpacion?     @relation(fields: [id_resultado_palpacion], references: [id_resultado_palpacion], map: "fk_er_resultado")
+  tipos_evento_reproductivo                                          tipos_evento_reproductivo @relation(fields: [id_tipo_evento_reproductivo], references: [id_tipo_evento_reproductivo], map: "fk_er_tipo")
+
+  @@index([id_animal, empresa_id, fecha], map: "idx_er_animal_fecha")
+  @@index([created_by], map: "idx_er_created_by")
+  @@index([reproductor_id, empresa_id], map: "idx_er_reproductor")
+  @@index([id_resultado_palpacion], map: "idx_er_resultado")
+  @@index([id_tipo_evento_reproductivo], map: "idx_er_tipo")
+}
+
+model eventos_sanitarios {
+  id_evento_sanitario BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id          BigInt         @db.UnsignedBigInt
+  id_animal           BigInt         @db.UnsignedBigInt
+  fecha               DateTime       @db.Date
+  id_enfermedad       BigInt?        @db.UnsignedBigInt
+  descripcion         String?        @db.Text
+  created_by          BigInt?        @db.UnsignedBigInt
+  created_at          DateTime       @default(now()) @db.Timestamp(0)
+  animales            animales       @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_es_animal")
+  usuarios            usuarios?      @relation(fields: [created_by], references: [id_usuario], map: "fk_es_created_by")
+  enfermedades        enfermedades?  @relation(fields: [id_enfermedad], references: [id_enfermedad], map: "fk_es_enfermedad")
+  tratamientos        tratamientos[]
+
+  @@index([id_animal, empresa_id, fecha], map: "idx_es_animal_fecha")
+  @@index([created_by], map: "idx_es_created_by")
+  @@index([id_enfermedad], map: "idx_es_enfermedad")
+}
+
+model fincas {
+  id_finca              BigInt                  @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id            BigInt                  @db.UnsignedBigInt
+  nombre                String                  @db.VarChar(160)
+  area_hectareas        Decimal?                @db.Decimal(12, 2)
+  moneda_base_id        BigInt                  @db.UnsignedBigInt
+  direccion             String?                 @db.VarChar(255)
+  notas                 String?                 @db.Text
+  created_at            DateTime                @default(now()) @db.Timestamp(0)
+  updated_at            DateTime                @default(now()) @db.Timestamp(0)
+  animales              animales[]
+  auditorias_inventario auditorias_inventario[]
+  entregas_leche        entregas_leche[]
+  empresas              empresas                @relation(fields: [empresa_id], references: [id_empresa], onDelete: Cascade, map: "fk_fincas_empresa")
+  monedas               monedas                 @relation(fields: [moneda_base_id], references: [id_moneda], map: "fk_fincas_moneda")
+  liquidaciones_leche   liquidaciones_leche[]
+  lotes                 lotes[]
+  movimientos_animales  movimientos_animales[]
+  ocupacion_potreros    ocupacion_potreros[]
+  potreros              potreros[]
+  produccion_leche      produccion_leche[]
+  usuario_fincas        usuario_fincas[]
+
+  @@id([id_finca, empresa_id])
+  @@unique([empresa_id, nombre], map: "uq_fincas_empresa_nombre")
+  @@index([moneda_base_id], map: "idx_fincas_moneda")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model lactancias {
+  id_lactancia  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id    BigInt    @db.UnsignedBigInt
+  id_animal     BigInt    @db.UnsignedBigInt
+  fecha_inicio  DateTime  @db.Date
+  fecha_fin     DateTime? @db.Date
+  observaciones String?   @db.Text
+  animales      animales  @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_lac_animal")
+
+  @@index([id_animal, empresa_id, fecha_inicio], map: "idx_lac_animal_inicio")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model liquidaciones_leche {
+  id_liquidacion    BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id        BigInt            @db.UnsignedBigInt
+  id_finca          BigInt            @db.UnsignedBigInt
+  id_centro         BigInt            @db.UnsignedBigInt
+  fecha_inicio      DateTime          @db.Date
+  fecha_fin         DateTime          @db.Date
+  litros_pagados    Decimal           @db.Decimal(12, 3)
+  precio_por_litro  Decimal?          @db.Decimal(18, 6)
+  monto_pagado      Decimal?          @db.Decimal(18, 2)
+  moneda_id         BigInt            @db.UnsignedBigInt
+  tasa_cambio       Decimal?          @db.Decimal(18, 8)
+  notas             String?           @db.Text
+  created_by        BigInt?           @db.UnsignedBigInt
+  created_at        DateTime          @default(now()) @db.Timestamp(0)
+  centros_recepcion centros_recepcion @relation(fields: [id_centro, empresa_id], references: [id_centro, empresa_id], map: "fk_ll_centro")
+  usuarios          usuarios?         @relation(fields: [created_by], references: [id_usuario], map: "fk_ll_created_by")
+  fincas            fincas            @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_ll_finca")
+  monedas           monedas           @relation(fields: [moneda_id], references: [id_moneda], map: "fk_ll_moneda")
+
+  @@index([id_centro, empresa_id, fecha_inicio, fecha_fin], map: "idx_ll_centro_rango")
+  @@index([created_by], map: "idx_ll_created_by")
+  @@index([id_finca, empresa_id, fecha_inicio, fecha_fin], map: "idx_ll_finca_rango")
+  @@index([moneda_id], map: "idx_ll_moneda")
+}
+
+model lotes {
+  id_lote                                                                     BigInt                 @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                                                                  BigInt                 @db.UnsignedBigInt
+  id_finca                                                                    BigInt                 @db.UnsignedBigInt
+  nombre                                                                      String                 @db.VarChar(160)
+  descripcion                                                                 String?                @db.Text
+  activo                                                                      Boolean                @default(true)
+  fincas                                                                      fincas                 @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_lotes_finca")
+  movimientos_animales_movimientos_animales_lote_destino_id_empresa_idTolotes movimientos_animales[] @relation("movimientos_animales_lote_destino_id_empresa_idTolotes")
+  movimientos_animales_movimientos_animales_lote_origen_id_empresa_idTolotes  movimientos_animales[] @relation("movimientos_animales_lote_origen_id_empresa_idTolotes")
+  ocupacion_potreros                                                          ocupacion_potreros[]
+
+  @@id([id_lote, empresa_id])
+  @@unique([empresa_id, id_finca, nombre], map: "uq_lotes_empresa_finca_nombre")
+  @@index([id_finca, empresa_id], map: "idx_lotes_finca")
+}
+
+model medicamentos {
+  id_medicamento   BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id       BigInt?        @db.UnsignedBigInt
+  empresa_id_u     BigInt?        @db.UnsignedBigInt
+  codigo           String         @db.VarChar(60)
+  nombre           String         @db.VarChar(160)
+  principio_activo String?        @db.VarChar(160)
+  empresas         empresas?      @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_med_empresa")
+  tratamientos     tratamientos[]
+
+  @@unique([empresa_id_u, codigo], map: "uq_med_empresa_codigo")
+  @@index([empresa_id], map: "idx_med_empresa")
+}
+
+model metodos_auditoria {
+  id_metodo_auditoria   BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id            BigInt?                 @db.UnsignedBigInt
+  empresa_id_u          BigInt?                 @db.UnsignedBigInt
+  codigo                String                  @db.VarChar(60)
+  nombre                String                  @db.VarChar(140)
+  auditorias_inventario auditorias_inventario[]
+  empresas              empresas?               @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_ma_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_ma_empresa_codigo")
+  @@index([empresa_id], map: "idx_ma_empresa")
+}
+
+model monedas {
+  id_moneda                                            BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  codigo                                               String                @unique(map: "uq_monedas_codigo") @db.VarChar(10)
+  nombre                                               String                @db.VarChar(80)
+  simbolo                                              String?               @db.VarChar(10)
+  fincas                                               fincas[]
+  liquidaciones_leche                                  liquidaciones_leche[]
+  tasas_cambio_tasas_cambio_moneda_destino_idTomonedas tasas_cambio[]        @relation("tasas_cambio_moneda_destino_idTomonedas")
+  tasas_cambio_tasas_cambio_moneda_origen_idTomonedas  tasas_cambio[]        @relation("tasas_cambio_moneda_origen_idTomonedas")
+}
+
+model motivos_movimiento {
+  id_motivo_movimiento BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id           BigInt?                @db.UnsignedBigInt
+  empresa_id_u         BigInt?                @db.UnsignedBigInt
+  codigo               String                 @db.VarChar(60)
+  nombre               String                 @db.VarChar(140)
+  empresas             empresas?              @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_mm_empresa")
+  movimientos_animales movimientos_animales[]
+
+  @@unique([empresa_id_u, codigo], map: "uq_mm_empresa_codigo")
+  @@index([empresa_id], map: "idx_mm_empresa")
+}
+
+model movimientos_animales {
+  id_movimiento                                                         BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                                                            BigInt              @db.UnsignedBigInt
+  id_finca                                                              BigInt              @db.UnsignedBigInt
+  fecha_hora                                                            DateTime            @db.DateTime(0)
+  id_animal                                                             BigInt              @db.UnsignedBigInt
+  lote_origen_id                                                        BigInt?             @db.UnsignedBigInt
+  lote_destino_id                                                       BigInt?             @db.UnsignedBigInt
+  potrero_origen_id                                                     BigInt?             @db.UnsignedBigInt
+  potrero_destino_id                                                    BigInt?             @db.UnsignedBigInt
+  id_motivo_movimiento                                                  BigInt?             @db.UnsignedBigInt
+  observaciones                                                         String?             @db.Text
+  created_by                                                            BigInt?             @db.UnsignedBigInt
+  created_at                                                            DateTime            @default(now()) @db.Timestamp(0)
+  animales                                                              animales            @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_mov_animal")
+  usuarios                                                              usuarios?           @relation(fields: [created_by], references: [id_usuario], map: "fk_mov_created_by")
+  fincas                                                                fincas              @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_mov_finca")
+  lotes_movimientos_animales_lote_destino_id_empresa_idTolotes          lotes?              @relation("movimientos_animales_lote_destino_id_empresa_idTolotes", fields: [lote_destino_id, empresa_id], references: [id_lote, empresa_id], map: "fk_mov_lote_dest")
+  lotes_movimientos_animales_lote_origen_id_empresa_idTolotes           lotes?              @relation("movimientos_animales_lote_origen_id_empresa_idTolotes", fields: [lote_origen_id, empresa_id], references: [id_lote, empresa_id], map: "fk_mov_lote_origen")
+  motivos_movimiento                                                    motivos_movimiento? @relation(fields: [id_motivo_movimiento], references: [id_motivo_movimiento], map: "fk_mov_motivo")
+  potreros_movimientos_animales_potrero_destino_id_empresa_idTopotreros potreros?           @relation("movimientos_animales_potrero_destino_id_empresa_idTopotreros", fields: [potrero_destino_id, empresa_id], references: [id_potrero, empresa_id], map: "fk_mov_potrero_dest")
+  potreros_movimientos_animales_potrero_origen_id_empresa_idTopotreros  potreros?           @relation("movimientos_animales_potrero_origen_id_empresa_idTopotreros", fields: [potrero_origen_id, empresa_id], references: [id_potrero, empresa_id], map: "fk_mov_potrero_origen")
+
+  @@index([id_animal, empresa_id, fecha_hora], map: "idx_mov_animal_fecha")
+  @@index([created_by], map: "idx_mov_created_by")
+  @@index([id_finca, empresa_id, fecha_hora], map: "idx_mov_finca_fecha")
+  @@index([lote_destino_id, empresa_id], map: "idx_mov_lote_dest")
+  @@index([lote_origen_id, empresa_id], map: "idx_mov_lote_origen")
+  @@index([id_motivo_movimiento], map: "idx_mov_motivo")
+  @@index([potrero_destino_id, empresa_id], map: "idx_mov_pot_dest")
+  @@index([potrero_origen_id, empresa_id], map: "idx_mov_pot_origen")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ocupacion_potreros {
+  id_ocupacion BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id   BigInt    @db.UnsignedBigInt
+  id_finca     BigInt    @db.UnsignedBigInt
+  fecha_inicio DateTime  @db.Date
+  fecha_fin    DateTime? @db.Date
+  id_lote      BigInt    @db.UnsignedBigInt
+  id_potrero   BigInt    @db.UnsignedBigInt
+  notas        String?   @db.Text
+  fincas       fincas    @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_op_finca")
+  lotes        lotes     @relation(fields: [id_lote, empresa_id], references: [id_lote, empresa_id], onDelete: Cascade, map: "fk_op_lote")
+  potreros     potreros  @relation(fields: [id_potrero, empresa_id], references: [id_potrero, empresa_id], onDelete: Cascade, map: "fk_op_potrero")
+
+  @@index([id_finca, empresa_id], map: "idx_op_finca")
+  @@index([id_lote, empresa_id, fecha_inicio], map: "idx_op_lote")
+  @@index([id_potrero, empresa_id, fecha_inicio], map: "idx_op_potrero")
+}
+
+model permisos {
+  id_permiso     BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  codigo         String           @unique(map: "uq_permisos_codigo") @db.VarChar(80)
+  nombre         String           @db.VarChar(140)
+  descripcion    String?          @db.Text
+  roles_permisos roles_permisos[]
+}
+
+model planes {
+  id_plan     BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  codigo      String     @unique(map: "uq_planes_codigo") @db.VarChar(50)
+  nombre      String     @db.VarChar(120)
+  descripcion String?    @db.Text
+  activo      Boolean    @default(true)
+  created_at  DateTime   @default(now()) @db.Timestamp(0)
+  empresas    empresas[]
+}
+
+model potreros {
+  id_potrero                                                                        BigInt                 @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                                                                        BigInt                 @db.UnsignedBigInt
+  id_finca                                                                          BigInt                 @db.UnsignedBigInt
+  nombre                                                                            String                 @db.VarChar(160)
+  area_hectareas                                                                    Decimal?               @db.Decimal(12, 2)
+  id_tipo_potrero                                                                   BigInt?                @db.UnsignedBigInt
+  notas                                                                             String?                @db.Text
+  movimientos_animales_movimientos_animales_potrero_destino_id_empresa_idTopotreros movimientos_animales[] @relation("movimientos_animales_potrero_destino_id_empresa_idTopotreros")
+  movimientos_animales_movimientos_animales_potrero_origen_id_empresa_idTopotreros  movimientos_animales[] @relation("movimientos_animales_potrero_origen_id_empresa_idTopotreros")
+  ocupacion_potreros                                                                ocupacion_potreros[]
+  fincas                                                                            fincas                 @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_potreros_finca")
+  tipos_potrero                                                                     tipos_potrero?         @relation(fields: [id_tipo_potrero], references: [id_tipo_potrero], map: "fk_potreros_tipo")
+
+  @@id([id_potrero, empresa_id])
+  @@unique([empresa_id, id_finca, nombre], map: "uq_potreros_empresa_finca_nombre")
+  @@index([id_finca, empresa_id], map: "idx_potreros_finca")
+  @@index([id_tipo_potrero], map: "idx_potreros_tipo")
+}
+
+model produccion_leche {
+  id_produccion  BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id     BigInt          @db.UnsignedBigInt
+  id_finca       BigInt          @db.UnsignedBigInt
+  fecha          DateTime        @db.Date
+  id_turno       BigInt?         @db.UnsignedBigInt
+  litros         Decimal         @db.Decimal(12, 3)
+  notas          String?         @db.Text
+  created_by     BigInt?         @db.UnsignedBigInt
+  created_at     DateTime        @default(now()) @db.Timestamp(0)
+  usuarios       usuarios?       @relation(fields: [created_by], references: [id_usuario], map: "fk_pl_created_by")
+  fincas         fincas          @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_pl_finca")
+  turnos_ordenio turnos_ordenio? @relation(fields: [id_turno], references: [id_turno], map: "fk_pl_turno")
+
+  @@unique([empresa_id, id_finca, fecha, id_turno], map: "uq_pl_finca_fecha_turno")
+  @@index([created_by], map: "idx_pl_created_by")
+  @@index([id_finca, empresa_id, fecha], map: "idx_pl_finca_fecha")
+  @@index([id_turno], map: "idx_pl_turno")
+}
+
+model protocolo_ejecucion_tareas {
+  id                    BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  id_ejecucion          BigInt                @db.UnsignedBigInt
+  id_tarea              BigInt                @db.UnsignedBigInt
+  completada            Boolean               @default(false)
+  fecha                 DateTime?             @db.Date
+  responsable           String?               @db.VarChar(160)
+  notas                 String?               @db.Text
+  protocolo_ejecuciones protocolo_ejecuciones @relation(fields: [id_ejecucion], references: [id_ejecucion], onDelete: Cascade, map: "fk_pet_ejecucion")
+  protocolo_tareas      protocolo_tareas      @relation(fields: [id_tarea], references: [id_tarea], map: "fk_pet_tarea")
+
+  @@unique([id_ejecucion, id_tarea], map: "uq_pet_ejecucion_tarea")
+  @@index([id_tarea], map: "idx_pet_tarea")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model protocolo_ejecuciones {
+  id_ejecucion               BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                 BigInt                       @db.UnsignedBigInt
+  id_protocolo               BigInt                       @db.UnsignedBigInt
+  id_animal                  BigInt                       @db.UnsignedBigInt
+  fecha_inicio               DateTime                     @db.Date
+  fecha_cierre               DateTime?                    @db.Date
+  observaciones              String?                      @db.Text
+  created_by                 BigInt?                      @db.UnsignedBigInt
+  created_at                 DateTime                     @default(now()) @db.Timestamp(0)
+  protocolo_ejecucion_tareas protocolo_ejecucion_tareas[]
+  animales                   animales                     @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_pe_animal")
+  usuarios                   usuarios?                    @relation(fields: [created_by], references: [id_usuario], map: "fk_pe_created_by")
+  protocolos                 protocolos                   @relation(fields: [id_protocolo], references: [id_protocolo], map: "fk_pe_protocolo")
+
+  @@index([id_animal, empresa_id, fecha_inicio], map: "idx_pe_animal")
+  @@index([created_by], map: "idx_pe_created_by")
+  @@index([id_protocolo], map: "idx_pe_protocolo")
+}
+
+model protocolo_tareas {
+  id_tarea                   BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  id_protocolo               BigInt                       @db.UnsignedBigInt
+  nombre                     String                       @db.VarChar(160)
+  dia_objetivo               Int
+  obligatorio                Boolean                      @default(true)
+  protocolo_ejecucion_tareas protocolo_ejecucion_tareas[]
+  protocolos                 protocolos                   @relation(fields: [id_protocolo], references: [id_protocolo], onDelete: Cascade, map: "fk_pt_protocolo")
+
+  @@index([id_protocolo], map: "idx_pt_protocolo")
+}
+
+model protocolos {
+  id_protocolo          BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id            BigInt?                 @db.UnsignedBigInt
+  empresa_id_u          BigInt?                 @db.UnsignedBigInt
+  codigo                String                  @db.VarChar(60)
+  nombre                String                  @db.VarChar(160)
+  descripcion           String?                 @db.Text
+  activo                Boolean                 @default(true)
+  protocolo_ejecuciones protocolo_ejecuciones[]
+  protocolo_tareas      protocolo_tareas[]
+  empresas              empresas?               @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_pr_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_pr_empresa_codigo")
+  @@index([empresa_id], map: "idx_pr_empresa")
+}
+
+model razas {
+  id_raza      BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id   BigInt?    @db.UnsignedBigInt
+  empresa_id_u BigInt?    @db.UnsignedBigInt
+  codigo       String     @db.VarChar(60)
+  nombre       String     @db.VarChar(140)
+  animales     animales[]
+  empresas     empresas?  @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_razas_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_razas_empresa_codigo")
+  @@index([empresa_id], map: "idx_razas_empresa")
+}
+
+model recordatorios {
+  id_recordatorio      BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id           BigInt               @db.UnsignedBigInt
+  id_tipo_recordatorio BigInt               @db.UnsignedBigInt
+  id_animal            BigInt?              @db.UnsignedBigInt
+  fecha_programada     DateTime             @db.Date
+  descripcion          String?              @db.VarChar(200)
+  estado_codigo        String               @default("pendiente") @db.VarChar(30)
+  id_tratamiento       BigInt?              @db.UnsignedBigInt
+  id_retiro            BigInt?              @db.UnsignedBigInt
+  created_at           DateTime             @default(now()) @db.Timestamp(0)
+  animales             animales?            @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_rec_animal")
+  empresas             empresas             @relation(fields: [empresa_id], references: [id_empresa], onDelete: Cascade, map: "fk_rec_empresa")
+  estados_recordatorio estados_recordatorio @relation(fields: [estado_codigo], references: [codigo], map: "fk_rec_estado")
+  retiros              retiros?             @relation(fields: [id_retiro], references: [id_retiro], map: "fk_rec_retiro")
+  tipos_recordatorio   tipos_recordatorio   @relation(fields: [id_tipo_recordatorio], references: [id_tipo_recordatorio], map: "fk_rec_tipo")
+  tratamientos         tratamientos?        @relation(fields: [id_tratamiento], references: [id_tratamiento], map: "fk_rec_tratamiento")
+
+  @@index([id_retiro], map: "fk_rec_retiro")
+  @@index([id_tratamiento], map: "fk_rec_tratamiento")
+  @@index([id_animal, empresa_id], map: "idx_rec_animal")
+  @@index([empresa_id, fecha_programada], map: "idx_rec_empresa_fecha")
+  @@index([estado_codigo], map: "idx_rec_estado")
+  @@index([id_tipo_recordatorio], map: "idx_rec_tipo")
+}
+
+model resultados_palpacion {
+  id_resultado_palpacion BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id             BigInt?                 @db.UnsignedBigInt
+  empresa_id_u           BigInt?                 @db.UnsignedBigInt
+  codigo                 String                  @db.VarChar(40)
+  nombre                 String                  @db.VarChar(120)
+  eventos_reproductivos  eventos_reproductivos[]
+  empresas               empresas?               @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_rp_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_rp_empresa_codigo")
+  @@index([empresa_id], map: "idx_rp_empresa")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model retiros {
+  id_retiro      BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  id_tratamiento BigInt          @db.UnsignedBigInt
+  id_tipo_retiro BigInt          @db.UnsignedBigInt
+  dias_retiro    Int
+  fecha_inicio   DateTime        @db.Date
+  fecha_fin      DateTime        @db.Date
+  activo         Boolean         @default(true)
+  recordatorios  recordatorios[]
+  tipos_retiro   tipos_retiro    @relation(fields: [id_tipo_retiro], references: [id_tipo_retiro], map: "fk_ret_tipo")
+  tratamientos   tratamientos    @relation(fields: [id_tratamiento], references: [id_tratamiento], onDelete: Cascade, map: "fk_ret_tratamiento")
+
+  @@index([fecha_inicio, fecha_fin], map: "idx_ret_fechas")
+  @@index([id_tipo_retiro], map: "idx_ret_tipo")
+  @@index([id_tratamiento], map: "idx_ret_tratamiento")
+}
+
+model roles {
+  id_rol           BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  id_ambito_rol    BigInt             @db.UnsignedBigInt
+  codigo           String             @unique(map: "uq_roles_codigo") @db.VarChar(50)
+  nombre           String             @db.VarChar(120)
+  descripcion      String?            @db.Text
+  activo           Boolean            @default(true)
+  ambitos_rol      ambitos_rol        @relation(fields: [id_ambito_rol], references: [id_ambito_rol], map: "fk_roles_ambito")
+  roles_permisos   roles_permisos[]
+  usuario_empresas usuario_empresas[]
+  usuario_fincas   usuario_fincas[]
+
+  @@index([id_ambito_rol], map: "idx_roles_ambito")
+}
+
+model roles_permisos {
+  id_rol     BigInt   @db.UnsignedBigInt
+  id_permiso BigInt   @db.UnsignedBigInt
+  permisos   permisos @relation(fields: [id_permiso], references: [id_permiso], onDelete: Cascade, map: "fk_rp_permiso")
+  roles      roles    @relation(fields: [id_rol], references: [id_rol], onDelete: Cascade, map: "fk_rp_rol")
+
+  @@id([id_rol, id_permiso])
+  @@index([id_permiso], map: "idx_rp_permiso")
+}
+
+model tasas_cambio {
+  id_tasa                                         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                                      BigInt?   @db.UnsignedBigInt
+  empresa_id_u                                    BigInt?   @db.UnsignedBigInt
+  fecha                                           DateTime  @db.Date
+  moneda_origen_id                                BigInt    @db.UnsignedBigInt
+  moneda_destino_id                               BigInt    @db.UnsignedBigInt
+  tasa                                            Decimal   @db.Decimal(18, 8)
+  fuente                                          String?   @db.VarChar(120)
+  monedas_tasas_cambio_moneda_destino_idTomonedas monedas   @relation("tasas_cambio_moneda_destino_idTomonedas", fields: [moneda_destino_id], references: [id_moneda], map: "fk_tc_destino")
+  empresas                                        empresas? @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_tc_empresa")
+  monedas_tasas_cambio_moneda_origen_idTomonedas  monedas   @relation("tasas_cambio_moneda_origen_idTomonedas", fields: [moneda_origen_id], references: [id_moneda], map: "fk_tc_origen")
+
+  @@unique([empresa_id_u, fecha, moneda_origen_id, moneda_destino_id], map: "uq_tc_fecha_par_empresa")
+  @@index([moneda_destino_id], map: "idx_tc_dest")
+  @@index([empresa_id], map: "idx_tc_empresa")
+  @@index([moneda_origen_id], map: "idx_tc_origen")
+}
+
+model tipos_adjunto {
+  id_tipo_adjunto      BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id           BigInt?                @db.UnsignedBigInt
+  empresa_id_u         BigInt?                @db.UnsignedBigInt
+  codigo               String                 @db.VarChar(60)
+  nombre               String                 @db.VarChar(140)
+  adjuntos_transaccion adjuntos_transaccion[]
+  empresas             empresas?              @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_ta_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_ta_empresa_codigo")
+  @@index([empresa_id], map: "idx_ta_empresa")
+}
+
+model tipos_evento_reproductivo {
+  id_tipo_evento_reproductivo BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                  BigInt?                 @db.UnsignedBigInt
+  empresa_id_u                BigInt?                 @db.UnsignedBigInt
+  codigo                      String                  @db.VarChar(40)
+  nombre                      String                  @db.VarChar(120)
+  eventos_reproductivos       eventos_reproductivos[]
+  empresas                    empresas?               @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_ter_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_ter_empresa_codigo")
+  @@index([empresa_id], map: "idx_ter_empresa")
+}
+
+model tipos_identificacion {
+  id_tipo_identificacion  BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id              BigInt?                   @db.UnsignedBigInt
+  empresa_id_u            BigInt?                   @db.UnsignedBigInt
+  codigo                  String                    @db.VarChar(40)
+  nombre                  String                    @db.VarChar(120)
+  animal_identificaciones animal_identificaciones[]
+  auditoria_detalle       auditoria_detalle[]
+  empresas                empresas?                 @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_ti_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_ti_empresa_codigo")
+  @@index([empresa_id], map: "idx_ti_empresa")
+}
+
+model tipos_potrero {
+  id_tipo_potrero BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id      BigInt?    @db.UnsignedBigInt
+  empresa_id_u    BigInt?    @db.UnsignedBigInt
+  codigo          String     @db.VarChar(60)
+  nombre          String     @db.VarChar(140)
+  potreros        potreros[]
+  empresas        empresas?  @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_tp_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_tp_empresa_codigo")
+  @@index([empresa_id], map: "idx_tp_empresa")
+}
+
+model tipos_recordatorio {
+  id_tipo_recordatorio BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id           BigInt?         @db.UnsignedBigInt
+  empresa_id_u         BigInt?         @db.UnsignedBigInt
+  codigo               String          @db.VarChar(80)
+  nombre               String          @db.VarChar(160)
+  recordatorios        recordatorios[]
+  empresas             empresas?       @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_trc_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_trc_empresa_codigo")
+  @@index([empresa_id], map: "idx_trc_empresa")
+}
+
+model tipos_retiro {
+  id_tipo_retiro BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id     BigInt?   @db.UnsignedBigInt
+  empresa_id_u   BigInt?   @db.UnsignedBigInt
+  codigo         String    @db.VarChar(40)
+  nombre         String    @db.VarChar(120)
+  retiros        retiros[]
+  empresas       empresas? @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_tr_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_tr_empresa_codigo")
+  @@index([empresa_id], map: "idx_tr_empresa")
+}
+
+model tipos_transaccion {
+  id_tipo_transaccion       BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id                BigInt?                     @db.UnsignedBigInt
+  empresa_id_u              BigInt?                     @db.UnsignedBigInt
+  codigo                    String                      @db.VarChar(30)
+  nombre                    String                      @db.VarChar(120)
+  categorias_financieras    categorias_financieras[]
+  empresas                  empresas?                   @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_tt_empresa")
+  transacciones_financieras transacciones_financieras[]
+
+  @@unique([empresa_id_u, codigo], map: "uq_tt_empresa_codigo")
+  @@index([empresa_id], map: "idx_tt_empresa")
+}
+
+model transacciones_financieras {
+  id_transaccion          BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id              BigInt                 @db.UnsignedBigInt
+  fecha                   DateTime               @db.Date
+  id_tipo_transaccion     BigInt                 @db.UnsignedBigInt
+  id_categoria_financiera BigInt                 @db.UnsignedBigInt
+  monto                   Decimal                @db.Decimal(18, 2)
+  descripcion             String?                @db.Text
+  id_tercero              BigInt?                @db.UnsignedBigInt
+  created_by              BigInt?                @db.UnsignedBigInt
+  created_at              DateTime               @default(now()) @db.Timestamp(0)
+  adjuntos_transaccion    adjuntos_transaccion[]
+  categorias_financieras  categorias_financieras @relation(fields: [id_categoria_financiera], references: [id_categoria_financiera], map: "fk_tf_categoria")
+  usuarios                usuarios?              @relation(fields: [created_by], references: [id_usuario], map: "fk_tf_created_by")
+  empresas                empresas               @relation(fields: [empresa_id], references: [id_empresa], onDelete: Cascade, map: "fk_tf_empresa")
+  tipos_transaccion       tipos_transaccion      @relation(fields: [id_tipo_transaccion], references: [id_tipo_transaccion], map: "fk_tf_tipo")
+
+  @@index([created_by], map: "fk_tf_created_by")
+  @@index([id_categoria_financiera], map: "idx_tf_cat")
+  @@index([empresa_id, fecha], map: "idx_tf_empresa_fecha")
+  @@index([id_tipo_transaccion], map: "idx_tf_tipo")
+}
+
+model tratamientos {
+  id_tratamiento      BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id          BigInt              @db.UnsignedBigInt
+  id_evento_sanitario BigInt?             @db.UnsignedBigInt
+  id_animal           BigInt              @db.UnsignedBigInt
+  fecha_inicio        DateTime            @db.Date
+  id_medicamento      BigInt              @db.UnsignedBigInt
+  dosis               String?             @db.VarChar(120)
+  via_administracion  String?             @db.VarChar(120)
+  notas               String?             @db.Text
+  created_by          BigInt?             @db.UnsignedBigInt
+  created_at          DateTime            @default(now()) @db.Timestamp(0)
+  recordatorios       recordatorios[]
+  retiros             retiros[]
+  animales            animales            @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_tr_animal")
+  usuarios            usuarios?           @relation(fields: [created_by], references: [id_usuario], map: "fk_tr_created_by")
+  eventos_sanitarios  eventos_sanitarios? @relation(fields: [id_evento_sanitario], references: [id_evento_sanitario], map: "fk_tr_evento")
+  medicamentos        medicamentos        @relation(fields: [id_medicamento], references: [id_medicamento], map: "fk_tr_medicamento")
+
+  @@index([id_animal, empresa_id, fecha_inicio], map: "idx_tr_animal_fecha")
+  @@index([created_by], map: "idx_tr_created_by")
+  @@index([id_evento_sanitario], map: "idx_tr_evento")
+  @@index([id_medicamento], map: "idx_tr_medicamento")
+}
+
+model turnos_ordenio {
+  id_turno         BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id       BigInt?            @db.UnsignedBigInt
+  empresa_id_u     BigInt?            @db.UnsignedBigInt
+  codigo           String             @db.VarChar(40)
+  nombre           String             @db.VarChar(120)
+  produccion_leche produccion_leche[]
+  empresas         empresas?          @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_to_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_to_empresa_codigo")
+  @@index([empresa_id], map: "idx_to_empresa")
+}
+
+model usuario_empresas {
+  id_usuario BigInt   @db.UnsignedBigInt
+  id_empresa BigInt   @db.UnsignedBigInt
+  id_rol     BigInt   @db.UnsignedBigInt
+  estado     String   @default("activo") @db.VarChar(20)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  empresas   empresas @relation(fields: [id_empresa], references: [id_empresa], onDelete: Cascade, map: "fk_ue_empresa")
+  roles      roles    @relation(fields: [id_rol], references: [id_rol], map: "fk_ue_rol")
+  usuarios   usuarios @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, map: "fk_ue_usuario")
+
+  @@id([id_usuario, id_empresa])
+  @@index([id_empresa], map: "idx_ue_empresa")
+  @@index([id_rol], map: "idx_ue_rol")
+}
+
+model usuario_fincas {
+  id_usuario BigInt    @db.UnsignedBigInt
+  id_finca   BigInt    @db.UnsignedBigInt
+  empresa_id BigInt    @db.UnsignedBigInt
+  id_rol     BigInt    @db.UnsignedBigInt
+  desde      DateTime? @db.Date
+  hasta      DateTime? @db.Date
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+  fincas     fincas    @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_uf_finca")
+  roles      roles     @relation(fields: [id_rol], references: [id_rol], map: "fk_uf_rol")
+  usuarios   usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, map: "fk_uf_usuario")
+
+  @@id([id_usuario, id_finca, empresa_id])
+  @@index([id_finca, empresa_id], map: "idx_uf_finca")
+  @@index([id_rol], map: "idx_uf_rol")
+}
+
+model usuarios {
+  id_usuario                BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  email                     String                      @unique(map: "uq_usuarios_email") @db.VarChar(254)
+  nombre                    String                      @db.VarChar(120)
+  telefono                  String?                     @db.VarChar(40)
+  password_hash             String?                     @db.VarChar(255)
+  activo                    Boolean                     @default(true)
+  created_at                DateTime                    @default(now()) @db.Timestamp(0)
+  updated_at                DateTime                    @default(now()) @db.Timestamp(0)
+  auditorias_inventario     auditorias_inventario[]
+  entregas_leche            entregas_leche[]
+  eventos_reproductivos     eventos_reproductivos[]
+  eventos_sanitarios        eventos_sanitarios[]
+  liquidaciones_leche       liquidaciones_leche[]
+  movimientos_animales      movimientos_animales[]
+  produccion_leche          produccion_leche[]
+  protocolo_ejecuciones     protocolo_ejecuciones[]
+  transacciones_financieras transacciones_financieras[]
+  tratamientos              tratamientos[]
+  usuario_empresas          usuario_empresas[]
+  usuario_fincas            usuario_fincas[]
+  vacunaciones              vacunaciones[]
+}
+
+model vacunaciones {
+  id_vacunacion BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id    BigInt    @db.UnsignedBigInt
+  fecha         DateTime  @db.Date
+  id_vacuna     BigInt    @db.UnsignedBigInt
+  id_animal     BigInt    @db.UnsignedBigInt
+  lote_vacuna   String?   @db.VarChar(60)
+  costo         Decimal?  @db.Decimal(18, 2)
+  observaciones String?   @db.Text
+  created_by    BigInt?   @db.UnsignedBigInt
+  created_at    DateTime  @default(now()) @db.Timestamp(0)
+  animales      animales  @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_vacn_animal")
+  usuarios      usuarios? @relation(fields: [created_by], references: [id_usuario], map: "fk_vacn_created_by")
+  empresas      empresas  @relation(fields: [empresa_id], references: [id_empresa], onDelete: Cascade, map: "fk_vacn_empresa")
+  vacunas       vacunas   @relation(fields: [id_vacuna], references: [id_vacuna], map: "fk_vacn_vacuna")
+
+  @@index([created_by], map: "fk_vacn_created_by")
+  @@index([id_animal, empresa_id], map: "idx_vacn_animal")
+  @@index([empresa_id, fecha], map: "idx_vacn_empresa_fecha")
+  @@index([id_vacuna], map: "idx_vacn_vacuna")
+}
+
+model vacunas {
+  id_vacuna    BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id   BigInt?        @db.UnsignedBigInt
+  empresa_id_u BigInt?        @db.UnsignedBigInt
+  codigo       String         @db.VarChar(80)
+  nombre       String         @db.VarChar(160)
+  descripcion  String?        @db.Text
+  activo       Boolean        @default(true)
+  vacunaciones vacunaciones[]
+  empresas     empresas?      @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_vac_empresa")
+
+  @@unique([empresa_id_u, codigo], map: "uq_vac_empresa_codigo")
+  @@index([empresa_id], map: "idx_vac_empresa")
+}
