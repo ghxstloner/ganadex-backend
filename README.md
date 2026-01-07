@@ -57,6 +57,81 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+# Ganadex Backend API
+
+API REST multi-tenant para gestión ganadera con NestJS, Prisma y MySQL.
+
+## Características
+
+- **9 Módulos de negocio**: Animales, Identificaciones, Movimientos, Potreros, Lotes, Reproducción, Salud, Leche, Finanzas, Auditorías
+- **Multi-tenant**: Contexto de empresa activa en todas las operaciones
+- **RBAC**: Sistema de roles y permisos granulares
+- **Swagger/OpenAPI**: Documentación interactiva en `/api/docs`
+
+## Requisitos
+
+- Node.js 18+
+- MySQL 8.0+
+
+## Variables de Entorno
+
+```bash
+# .env
+DATABASE_URL="mysql://user:password@localhost:3306/ganadex"
+JWT_SECRET="tu-secreto-seguro"
+JWT_EXPIRES_IN="7d"
+CORS_ORIGIN="http://localhost:3000"
+PORT=3000
+```
+
+## Instalación
+
+```bash
+# Instalar dependencias
+npm install
+
+# Generar cliente Prisma
+npx prisma generate
+
+# Ejecutar migraciones
+npx prisma migrate dev
+
+# Sembrar datos base
+npm run prisma:seed
+```
+
+## Ejecución
+
+```bash
+# Desarrollo
+npm run start:dev
+
+# Producción
+npm run build && npm run start:prod
+```
+
+## Documentación API
+
+Una vez iniciado el servidor, accede a la documentación Swagger:
+
+- **URL**: `http://localhost:3000/api/docs`
+- **Autenticación**: Bearer Token (JWT)
+
+## Módulos Principales
+
+| Módulo | Endpoint Base | Descripción |
+|--------|---------------|-------------|
+| Animales | `/animales` | CRUD animales + perfil completo |
+| Identificaciones | `/identificaciones` | Identificadores de animales |
+| Movimientos | `/movimientos` | Trazabilidad de movimientos |
+| Potreros | `/potreros` | Gestión de potreros |
+| Lotes | `/lotes` | Agrupación de animales |
+| Reproducción | `/reproduccion` | Eventos reproductivos + semáforo |
+| Salud | `/salud` | Eventos sanitarios + retiros |
+| Leche | `/leche` | Entregas + conciliación |
+| Finanzas | `/finanzas` | Transacciones financieras |
+| Auditorías | `/auditorias` | Auditorías de inventario |
+
 ## Auth (Register / Login)
 
 ### Environment variables

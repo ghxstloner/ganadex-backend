@@ -183,7 +183,15 @@ async function main() {
     ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), orden=VALUES(orden);
   `)
 
-  // 17. Permisos globales (RBAC)
+  // 17. Tipos de Retiro
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO tipos_retiro (empresa_id, codigo, nombre) VALUES
+      (NULL,'LECHE','Retiro de leche'),
+      (NULL,'CARNE','Retiro de carne')
+    ON DUPLICATE KEY UPDATE nombre=VALUES(nombre);
+  `)
+
+  // 18. Permisos globales (RBAC) - includes new module permissions
   await prisma.$executeRawUnsafe(`
     INSERT INTO permisos (codigo, nombre, descripcion) VALUES
       ('PERFIL_LEER','Ver perfil','Acceder al perfil propio'),
@@ -196,10 +204,51 @@ async function main() {
       ('USUARIOS_CREAR','Crear usuarios','Invitar o crear usuarios'),
       ('USUARIOS_EDITAR','Editar usuarios','Editar datos del usuario'),
       ('USUARIOS_CAMBIAR_ROL','Cambiar rol','Asignar roles a usuarios'),
-      ('USUARIOS_ELIMINAR','Eliminar usuarios','Remover usuarios de la empresa')
+      ('USUARIOS_ELIMINAR','Eliminar usuarios','Remover usuarios de la empresa'),
+      ('ANIMALES_LEER','Ver animales','Listar y consultar animales'),
+      ('ANIMALES_CREAR','Crear animales','Registrar nuevos animales'),
+      ('ANIMALES_EDITAR','Editar animales','Modificar datos de animales'),
+      ('ANIMALES_ELIMINAR','Eliminar animales','Eliminar animales del sistema'),
+      ('SALUD_LEER','Ver salud','Consultar eventos sanitarios'),
+      ('SALUD_CREAR','Crear eventos salud','Registrar eventos sanitarios'),
+      ('SALUD_EDITAR','Editar salud','Modificar eventos sanitarios'),
+      ('SALUD_ELIMINAR','Eliminar salud','Eliminar eventos sanitarios'),
+      ('REPRODUCCION_LEER','Ver reproduccion','Consultar eventos reproductivos'),
+      ('REPRODUCCION_CREAR','Crear reproduccion','Registrar eventos reproductivos'),
+      ('REPRODUCCION_EDITAR','Editar reproduccion','Modificar eventos reproductivos'),
+      ('REPRODUCCION_ELIMINAR','Eliminar reproduccion','Eliminar eventos reproductivos'),
+      ('POTREROS_LEER','Ver potreros','Consultar potreros y lotes'),
+      ('POTREROS_CREAR','Crear potreros','Registrar potreros y lotes'),
+      ('POTREROS_EDITAR','Editar potreros','Modificar potreros y lotes'),
+      ('POTREROS_ELIMINAR','Eliminar potreros','Eliminar potreros y lotes'),
+      ('LECHE_LEER','Ver leche','Consultar produccion de leche'),
+      ('LECHE_CREAR','Crear entregas','Registrar entregas de leche'),
+      ('LECHE_EDITAR','Editar leche','Modificar registros de leche'),
+      ('LECHE_ELIMINAR','Eliminar leche','Eliminar registros de leche'),
+      ('FINANZAS_LEER','Ver finanzas','Consultar transacciones'),
+      ('FINANZAS_CREAR','Crear transacciones','Registrar ingresos y gastos'),
+      ('FINANZAS_EDITAR','Editar finanzas','Modificar transacciones'),
+      ('FINANZAS_ELIMINAR','Eliminar finanzas','Eliminar transacciones'),
+      ('AUDITORIAS_LEER','Ver auditorias','Consultar auditorias'),
+      ('AUDITORIAS_CREAR','Crear auditorias','Iniciar auditorias de inventario'),
+      ('AUDITORIAS_EDITAR','Editar auditorias','Modificar auditorias')
     ON DUPLICATE KEY UPDATE
       nombre=VALUES(nombre),
       descripcion=VALUES(descripcion);
+  `)
+
+  // 19. Categorías Financieras base
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO categorias_financieras (empresa_id, codigo, nombre, id_tipo_transaccion, activo, orden) VALUES
+      (NULL,'venta_leche','Venta de leche',(SELECT id_tipo_transaccion FROM tipos_transaccion WHERE codigo='ingreso' LIMIT 1),1,10),
+      (NULL,'venta_ganado','Venta de ganado',(SELECT id_tipo_transaccion FROM tipos_transaccion WHERE codigo='ingreso' LIMIT 1),1,20),
+      (NULL,'alimento','Alimento y suplementos',(SELECT id_tipo_transaccion FROM tipos_transaccion WHERE codigo='gasto' LIMIT 1),1,30),
+      (NULL,'mano_obra','Mano de obra',(SELECT id_tipo_transaccion FROM tipos_transaccion WHERE codigo='gasto' LIMIT 1),1,40),
+      (NULL,'veterinario','Servicios veterinarios',(SELECT id_tipo_transaccion FROM tipos_transaccion WHERE codigo='gasto' LIMIT 1),1,50),
+      (NULL,'medicamentos','Medicamentos',(SELECT id_tipo_transaccion FROM tipos_transaccion WHERE codigo='gasto' LIMIT 1),1,60),
+      (NULL,'otros_ingresos','Otros ingresos',(SELECT id_tipo_transaccion FROM tipos_transaccion WHERE codigo='ingreso' LIMIT 1),1,100),
+      (NULL,'otros_gastos','Otros gastos',(SELECT id_tipo_transaccion FROM tipos_transaccion WHERE codigo='gasto' LIMIT 1),1,110)
+    ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), activo=VALUES(activo), orden=VALUES(orden);
   `)
 
   console.log('Sembrado completado correctamente.')
