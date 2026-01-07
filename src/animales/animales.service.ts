@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
 import {
     parsePagination,
+    parsePaginationFromDto,
     parseSort,
     paginatedResponse,
 } from '../common/utils/pagination.util';
@@ -15,7 +16,7 @@ export class AnimalesService {
     constructor(private readonly prisma: PrismaService) { }
 
     async findAll(empresaId: bigint, query: QueryAnimalDto) {
-        const pagination = parsePagination(query.page, query.pageSize);
+        const pagination = parsePaginationFromDto(query);
         const sortParams = parseSort(query.sortBy, query.sortDir, [
             'nombre',
             'fecha_nacimiento',
@@ -29,13 +30,67 @@ export class AnimalesService {
             where.id_finca = parseBigInt(query.id_finca, 'id_finca');
         }
         if (query.sexo) {
-            where.sexo = query.sexo;
+            // Convert friendly values back to database values for filtering
+            let sexoValue = query.sexo;
+            if (sexoValue === 'macho') sexoValue = 'M';
+            if (sexoValue === 'hembra') sexoValue = 'F';
+            where.sexo = sexoValue;
         }
         if (query.id_raza) {
             where.id_raza = parseBigInt(query.id_raza, 'id_raza');
         }
+        if (query.id_estado) {
+            // Check if id_estado is a number (ID) or string (codigo)
+            const estadoValue = query.id_estado;
+            const isNumeric = /^\d+$/.test(estadoValue);
+
+            if (isNumeric) {
+                // Filter by ID
+                where.animal_estados_historial = {
+                    some: {
+                        id_estado_animal: parseBigInt(estadoValue, 'id_estado'),
+                        fecha_fin: null, // Only current/active estados
+                    }
+                };
+            } else {
+                // Filter by codigo
+                where.animal_estados_historial = {
+                    some: {
+                        estados_animales: {
+                            codigo: estadoValue
+                        },
+                        fecha_fin: null, // Only current/active estados
+                    }
+                };
+            }
+        }
+
         if (query.q) {
             where.nombre = { contains: query.q };
+        }
+
+        if (query.solo_activos) {
+            // Filter for animals that are currently active
+            if (where.animal_estados_historial) {
+                // If there's already an estado filter, modify it to include activo
+                const existingFilter = where.animal_estados_historial as any;
+                existingFilter.some = {
+                    ...existingFilter.some,
+                    estados_animales: {
+                        ...existingFilter.some.estados_animales,
+                        codigo: 'activo'
+                    },
+                    fecha_fin: null
+                };
+            } else {
+                // No existing estado filter, create one for activos
+                where.animal_estados_historial = {
+                    some: {
+                        estados_animales: { codigo: 'activo' },
+                        fecha_fin: null
+                    }
+                };
+            }
         }
 
         const orderBy = sortParams.sortBy

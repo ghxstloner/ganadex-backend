@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { FincaCreateDto } from './dto/finca-create.dto';
 import { FincaListDto } from './dto/finca-list.dto';
+import { parsePaginationFromDto, paginatedResponse } from '../common/utils/pagination.util';
 import { FincaUpdateDto } from './dto/finca-update.dto';
 
 @Injectable()
@@ -27,21 +28,37 @@ export class FincasService {
       }
     }
 
-    const fincas = await this.prisma.fincas.findMany({
-      where: {
-        empresa_id: activeEmpresaId,
-      },
-      select: {
-        id_finca: true,
-        empresa_id: true,
-        nombre: true,
-        area_hectareas: true,
-        moneda_base_id: true,
-        direccion: true,
-        notas: true,
-      },
-    });
-    return fincas.map((finca) => this.mapFinca(finca));
+    const pagination = parsePaginationFromDto(query);
+
+    const where: Record<string, unknown> = {
+      empresa_id: activeEmpresaId,
+    };
+
+    if (query.q) {
+      where.nombre = { contains: query.q };
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.fincas.findMany({
+        where,
+        skip: pagination.skip,
+        take: pagination.take,
+        select: {
+          id_finca: true,
+          empresa_id: true,
+          nombre: true,
+          area_hectareas: true,
+          moneda_base_id: true,
+          direccion: true,
+          notas: true,
+        },
+        orderBy: { nombre: 'asc' },
+      }),
+      this.prisma.fincas.count({ where }),
+    ]);
+
+    const mapped = data.map((finca) => this.mapFinca(finca));
+    return paginatedResponse(mapped, total, pagination);
   }
 
   async create(userId: bigint, dto: FincaCreateDto) {

@@ -28,6 +28,20 @@ export function parsePagination(
     };
 }
 
+// Updated version that works with QueryPaginationDto
+export function parsePaginationFromDto(dto: { page?: number; getEffectivePageSize(): number }): PaginationParams {
+    const safePage = Math.max(1, dto.page ?? 1);
+    const safePageSize = Math.min(100, Math.max(1, dto.getEffectivePageSize()));
+    const skip = (safePage - 1) * safePageSize;
+
+    return {
+        page: safePage,
+        pageSize: safePageSize,
+        skip,
+        take: safePageSize,
+    };
+}
+
 export function parseSort(
     sortBy?: string,
     sortDir?: string,

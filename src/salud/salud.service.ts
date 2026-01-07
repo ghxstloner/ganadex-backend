@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
-import { parsePagination, paginatedResponse } from '../common/utils/pagination.util';
+import { parsePagination, parsePaginationFromDto, paginatedResponse } from '../common/utils/pagination.util';
 import { CreateEventoSanitarioDto } from './dto/create-evento-sanitario.dto';
 import { CreateTratamientoDto } from './dto/create-tratamiento.dto';
 import { QueryEventoSanitarioDto } from './dto/query-evento-sanitario.dto';
@@ -12,7 +12,7 @@ export class SaludService {
     constructor(private readonly prisma: PrismaService) { }
 
     async findAllEventos(empresaId: bigint, query: QueryEventoSanitarioDto) {
-        const pagination = parsePagination(query.page, query.pageSize);
+        const pagination = parsePaginationFromDto(query);
 
         const where: Record<string, unknown> = { empresa_id: empresaId };
 

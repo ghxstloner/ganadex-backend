@@ -15,6 +15,14 @@ export class QueryPaginationDto {
     @Max(100)
     pageSize?: number = 20;
 
+    // Alias for pageSize to support 'limit' parameter from frontend
+    @IsOptional()
+    @Transform(({ value }) => parseInt(value, 10))
+    @IsInt()
+    @Min(1)
+    @Max(100)
+    limit?: number;
+
     @IsOptional()
     @IsString()
     q?: string;
@@ -26,4 +34,9 @@ export class QueryPaginationDto {
     @IsOptional()
     @IsIn(['asc', 'desc'])
     sortDir?: 'asc' | 'desc' = 'asc';
+
+    // Helper method to get the effective page size (limit takes precedence)
+    getEffectivePageSize(): number {
+        return this.limit ?? this.pageSize ?? 20;
+    }
 }

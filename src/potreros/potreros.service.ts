@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
-import { parsePagination, paginatedResponse } from '../common/utils/pagination.util';
+import { parsePagination, parsePaginationFromDto, paginatedResponse } from '../common/utils/pagination.util';
 import { CreatePotreroDto } from './dto/create-potrero.dto';
 import { QueryPotreroDto } from './dto/query-potrero.dto';
 import { UpdatePotreroDto } from './dto/update-potrero.dto';
@@ -11,7 +11,7 @@ export class PotrerosService {
     constructor(private readonly prisma: PrismaService) { }
 
     async findAll(empresaId: bigint, query: QueryPotreroDto) {
-        const pagination = parsePagination(query.page, query.pageSize);
+        const pagination = parsePaginationFromDto(query);
 
         const where: Record<string, unknown> = { empresa_id: empresaId };
 

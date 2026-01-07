@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
-import { parsePagination, paginatedResponse } from '../common/utils/pagination.util';
+import { parsePagination, parsePaginationFromDto, paginatedResponse } from '../common/utils/pagination.util';
 import { CreateMovimientoDto } from './dto/create-movimiento.dto';
 import { QueryMovimientoDto } from './dto/query-movimiento.dto';
 import { UpdateMovimientoDto } from './dto/update-movimiento.dto';
@@ -11,7 +11,7 @@ export class MovimientosService {
     constructor(private readonly prisma: PrismaService) { }
 
     async findAll(empresaId: bigint, query: QueryMovimientoDto) {
-        const pagination = parsePagination(query.page, query.pageSize);
+        const pagination = parsePaginationFromDto(query);
 
         const where: Record<string, unknown> = { empresa_id: empresaId };
 

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
-import { parsePagination, paginatedResponse } from '../common/utils/pagination.util';
+import { parsePagination, parsePaginationFromDto, paginatedResponse } from '../common/utils/pagination.util';
 import { CreateAuditoriaDto } from './dto/create-auditoria.dto';
 import { QueryPaginationDto } from '../common/dto/query-pagination.dto';
 
@@ -10,7 +10,7 @@ export class AuditoriasService {
     constructor(private readonly prisma: PrismaService) { }
 
     async findAll(empresaId: bigint, query: QueryPaginationDto) {
-        const pagination = parsePagination(query.page, query.pageSize);
+        const pagination = parsePaginationFromDto(query);
 
         const [data, total] = await Promise.all([
             this.prisma.auditorias_inventario.findMany({
