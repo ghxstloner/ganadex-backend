@@ -87,6 +87,7 @@ model animales {
   fecha_nacimiento                                                                DateTime?                     @db.Date
   fecha_nacimiento_estimada                                                       Boolean                       @default(false)
   id_raza                                                                         BigInt?                       @db.UnsignedBigInt
+  id_color_pelaje                                                                BigInt?                       @db.UnsignedBigInt
   padre_id                                                                        BigInt?                       @db.UnsignedBigInt
   madre_id                                                                        BigInt?                       @db.UnsignedBigInt
   notas                                                                           String?                       @db.Text
@@ -101,6 +102,7 @@ model animales {
   animales_animales_padre_id_empresa_idToanimales                                 animales?                     @relation("animales_padre_id_empresa_idToanimales", fields: [padre_id, empresa_id], references: [id_animal, empresa_id], map: "fk_animales_padre")
   other_animales_animales_padre_id_empresa_idToanimales                           animales[]                    @relation("animales_padre_id_empresa_idToanimales")
   razas                                                                           razas?                        @relation(fields: [id_raza], references: [id_raza], map: "fk_animales_raza")
+  colores_pelaje                                                                 colores_pelaje?               @relation(fields: [id_color_pelaje], references: [id_color], map: "fk_animales_color")
   auditoria_detalle                                                               auditoria_detalle[]
   eventos_reproductivos_eventos_reproductivos_id_animal_empresa_idToanimales      eventos_reproductivos[]       @relation("eventos_reproductivos_id_animal_empresa_idToanimales")
   eventos_reproductivos_eventos_reproductivos_reproductor_id_empresa_idToanimales eventos_reproductivos[]       @relation("eventos_reproductivos_reproductor_id_empresa_idToanimales")
@@ -111,12 +113,14 @@ model animales {
   recordatorios                                                                   recordatorios[]
   tratamientos                                                                    tratamientos[]
   vacunaciones                                                                    vacunaciones[]
+  pesajes_leche_animales                                                          pesajes_leche_animales[]
 
   @@id([id_animal, empresa_id])
   @@index([id_finca, empresa_id], map: "idx_animales_finca")
   @@index([madre_id, empresa_id], map: "idx_animales_madre")
   @@index([padre_id, empresa_id], map: "idx_animales_padre")
   @@index([id_raza], map: "idx_animales_raza")
+  @@index([id_color_pelaje], map: "idx_animales_color")
 }
 
 model auditoria_detalle {
@@ -331,6 +335,10 @@ model eventos_reproductivos {
   id_resultado_palpacion                                             BigInt?                   @db.UnsignedBigInt
   reproductor_id                                                     BigInt?                   @db.UnsignedBigInt
   reproductor_identificacion                                         String?                   @db.VarChar(120)
+  proveedor_semen                                                    String?                   @db.VarChar(160)
+  codigo_pajuela                                                     String?                   @db.VarChar(120)
+  fecha_estimada_parto                                               DateTime?                 @db.Date
+  control_21_dias                                                    DateTime?                 @db.Date
   created_by                                                         BigInt?                   @db.UnsignedBigInt
   created_at                                                         DateTime                  @default(now()) @db.Timestamp(0)
   animales_eventos_reproductivos_id_animal_empresa_idToanimales      animales                  @relation("eventos_reproductivos_id_animal_empresa_idToanimales", fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_er_animal")
@@ -611,6 +619,29 @@ model produccion_leche {
   @@index([id_turno], map: "idx_pl_turno")
 }
 
+model pesajes_leche_animales {
+  id_pesaje     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id    BigInt    @db.UnsignedBigInt
+  id_animal     BigInt    @db.UnsignedBigInt
+  fecha         DateTime  @db.Date
+  id_turno      BigInt?   @db.UnsignedBigInt
+  litros        Decimal   @db.Decimal(12, 3)
+  notas         String?   @db.Text
+  created_by    BigInt?   @db.UnsignedBigInt
+  created_at    DateTime  @default(now()) @db.Timestamp(0)
+
+  // Relaciones
+  animales      animales       @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_pla_animal")
+  turnos_ordenio turnos_ordenio? @relation(fields: [id_turno], references: [id_turno], map: "fk_pla_turno")
+  usuarios      usuarios?      @relation(fields: [created_by], references: [id_usuario], map: "fk_pla_created_by")
+
+  // Un registro por vaca por fecha (y opcionalmente por turno)
+  @@unique([empresa_id, id_animal, fecha, id_turno], map: "uq_pla_animal_fecha_turno")
+  @@index([id_animal, empresa_id, fecha], map: "idx_pla_animal_fecha")
+  @@index([created_by], map: "idx_pla_created_by")
+  @@index([id_turno], map: "idx_pla_turno")
+}
+
 model protocolo_ejecucion_tareas {
   id                    BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
   id_ejecucion          BigInt                @db.UnsignedBigInt
@@ -686,6 +717,14 @@ model razas {
 
   @@unique([empresa_id_u, codigo], map: "uq_razas_empresa_codigo")
   @@index([empresa_id], map: "idx_razas_empresa")
+}
+
+model colores_pelaje {
+  id_color   BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  codigo     String   @unique(map: "uq_colores_pelaje_codigo") @db.VarChar(40)
+  nombre     String   @db.VarChar(120)
+
+  animales   animales[]
 }
 
 model recordatorios {
@@ -944,8 +983,9 @@ model turnos_ordenio {
   empresa_id_u     BigInt?            @db.UnsignedBigInt
   codigo           String             @db.VarChar(40)
   nombre           String             @db.VarChar(120)
-  produccion_leche produccion_leche[]
-  empresas         empresas?          @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_to_empresa")
+  produccion_leche      produccion_leche[]
+  pesajes_leche_animales pesajes_leche_animales[]
+  empresas              empresas?          @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_to_empresa")
 
   @@unique([empresa_id_u, codigo], map: "uq_to_empresa_codigo")
   @@index([empresa_id], map: "idx_to_empresa")
@@ -1006,6 +1046,7 @@ model usuarios {
   usuario_empresas          usuario_empresas[]
   usuario_fincas            usuario_fincas[]
   vacunaciones              vacunaciones[]
+  pesajes_leche_animales    pesajes_leche_animales[]
 }
 
 model vacunaciones {
