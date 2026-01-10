@@ -3,9 +3,12 @@ import path from 'node:path';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 
 const prismaPackagePath = path.join(process.cwd(), 'generated/prisma');
-const prismaPackage = require(prismaPackagePath) as typeof import('../../generated/prisma');
-const PrismaClientClass: new (options?: unknown) => import('../../generated/prisma').PrismaClient =
-  prismaPackage.PrismaClient;
+const prismaPackage = require(
+  prismaPackagePath,
+) as typeof import('../../generated/prisma');
+const PrismaClientClass: new (
+  options?: unknown,
+) => import('../../generated/prisma').PrismaClient = prismaPackage.PrismaClient;
 
 @Injectable()
 export class PrismaService

@@ -13,7 +13,12 @@ import { UsuariosService } from './usuarios.service';
 
 @Module({
   imports: [PrismaModule, TenancyModule, AuthModule],
-  controllers: [MeController, PermisosController, RolesController, UsuariosController],
+  controllers: [
+    MeController,
+    PermisosController,
+    RolesController,
+    UsuariosController,
+  ],
   providers: [RbacService, RolesService, UsuariosService, PermissionsGuard],
 })
 export class RbacModule {}

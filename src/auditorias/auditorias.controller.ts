@@ -1,11 +1,11 @@
 import {
-    Body,
-    Controller,
-    Get,
-    Param,
-    Post,
-    Query,
-    UseGuards,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -21,32 +21,32 @@ import { QueryPaginationDto } from '../common/dto/query-pagination.dto';
 @UseGuards(JwtAuthGuard, EmpresaActivaGuard)
 @Controller('auditorias')
 export class AuditoriasController {
-    constructor(private readonly auditoriasService: AuditoriasService) { }
+  constructor(private readonly auditoriasService: AuditoriasService) {}
 
-    @Get()
-    @ApiOperation({ summary: 'Listar auditorías de inventario' })
-    async findAll(
-        @EmpresaActivaId() empresaId: bigint,
-        @Query() query: QueryPaginationDto,
-    ) {
-        return this.auditoriasService.findAll(empresaId, query);
-    }
+  @Get()
+  @ApiOperation({ summary: 'Listar auditorías de inventario' })
+  async findAll(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query() query: QueryPaginationDto,
+  ) {
+    return this.auditoriasService.findAll(empresaId, query);
+  }
 
-    @Post()
-    @ApiOperation({ summary: 'Crear nueva auditoría de inventario' })
-    async create(
-        @EmpresaActivaId() empresaId: bigint,
-        @Body() dto: CreateAuditoriaDto,
-    ) {
-        return this.auditoriasService.create(empresaId, dto);
-    }
+  @Post()
+  @ApiOperation({ summary: 'Crear nueva auditoría de inventario' })
+  async create(
+    @EmpresaActivaId() empresaId: bigint,
+    @Body() dto: CreateAuditoriaDto,
+  ) {
+    return this.auditoriasService.create(empresaId, dto);
+  }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'Obtener auditoría con detalles' })
-    async findOne(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('id', ParseBigIntPipe) id: bigint,
-    ) {
-        return this.auditoriasService.findOne(empresaId, id);
-    }
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener auditoría con detalles' })
+  async findOne(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.auditoriasService.findOne(empresaId, id);
+  }
 }

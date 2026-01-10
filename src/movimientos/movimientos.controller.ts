@@ -1,13 +1,13 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    Query,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -24,51 +24,51 @@ import { UpdateMovimientoDto } from './dto/update-movimiento.dto';
 @UseGuards(JwtAuthGuard, EmpresaActivaGuard)
 @Controller('movimientos')
 export class MovimientosController {
-    constructor(private readonly movimientosService: MovimientosService) { }
+  constructor(private readonly movimientosService: MovimientosService) {}
 
-    @Get()
-    @ApiOperation({ summary: 'Listar movimientos con paginación y filtros' })
-    async findAll(
-        @EmpresaActivaId() empresaId: bigint,
-        @Query() query: QueryMovimientoDto,
-    ) {
-        return this.movimientosService.findAll(empresaId, query);
-    }
+  @Get()
+  @ApiOperation({ summary: 'Listar movimientos con paginación y filtros' })
+  async findAll(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query() query: QueryMovimientoDto,
+  ) {
+    return this.movimientosService.findAll(empresaId, query);
+  }
 
-    @Post()
-    @ApiOperation({ summary: 'Crear un nuevo movimiento' })
-    async create(
-        @EmpresaActivaId() empresaId: bigint,
-        @Body() dto: CreateMovimientoDto,
-    ) {
-        return this.movimientosService.create(empresaId, dto);
-    }
+  @Post()
+  @ApiOperation({ summary: 'Crear un nuevo movimiento' })
+  async create(
+    @EmpresaActivaId() empresaId: bigint,
+    @Body() dto: CreateMovimientoDto,
+  ) {
+    return this.movimientosService.create(empresaId, dto);
+  }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'Obtener movimiento por ID' })
-    async findOne(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('id', ParseBigIntPipe) id: bigint,
-    ) {
-        return this.movimientosService.findOne(empresaId, id);
-    }
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener movimiento por ID' })
+  async findOne(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.movimientosService.findOne(empresaId, id);
+  }
 
-    @Patch(':id')
-    @ApiOperation({ summary: 'Actualizar movimiento' })
-    async update(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('id', ParseBigIntPipe) id: bigint,
-        @Body() dto: UpdateMovimientoDto,
-    ) {
-        return this.movimientosService.update(empresaId, id, dto);
-    }
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar movimiento' })
+  async update(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: UpdateMovimientoDto,
+  ) {
+    return this.movimientosService.update(empresaId, id, dto);
+  }
 
-    @Delete(':id')
-    @ApiOperation({ summary: 'Eliminar movimiento' })
-    async remove(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('id', ParseBigIntPipe) id: bigint,
-    ) {
-        return this.movimientosService.remove(empresaId, id);
-    }
+  @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar movimiento' })
+  async remove(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.movimientosService.remove(empresaId, id);
+  }
 }

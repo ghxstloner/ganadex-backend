@@ -1,12 +1,12 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -22,45 +22,45 @@ import { UpdateIdentificacionDto } from './dto/update-identificacion.dto';
 @UseGuards(JwtAuthGuard, EmpresaActivaGuard)
 @Controller()
 export class IdentificacionesController {
-    constructor(
-        private readonly identificacionesService: IdentificacionesService,
-    ) { }
+  constructor(
+    private readonly identificacionesService: IdentificacionesService,
+  ) {}
 
-    @Get('animales/:animalId/identificaciones')
-    @ApiOperation({ summary: 'Listar identificaciones de un animal' })
-    async findByAnimal(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('animalId', ParseBigIntPipe) animalId: bigint,
-    ) {
-        return this.identificacionesService.findByAnimal(empresaId, animalId);
-    }
+  @Get('animales/:animalId/identificaciones')
+  @ApiOperation({ summary: 'Listar identificaciones de un animal' })
+  async findByAnimal(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('animalId', ParseBigIntPipe) animalId: bigint,
+  ) {
+    return this.identificacionesService.findByAnimal(empresaId, animalId);
+  }
 
-    @Post('animales/:animalId/identificaciones')
-    @ApiOperation({ summary: 'Agregar identificación a un animal' })
-    async create(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('animalId', ParseBigIntPipe) animalId: bigint,
-        @Body() dto: CreateIdentificacionDto,
-    ) {
-        return this.identificacionesService.create(empresaId, animalId, dto);
-    }
+  @Post('animales/:animalId/identificaciones')
+  @ApiOperation({ summary: 'Agregar identificación a un animal' })
+  async create(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('animalId', ParseBigIntPipe) animalId: bigint,
+    @Body() dto: CreateIdentificacionDto,
+  ) {
+    return this.identificacionesService.create(empresaId, animalId, dto);
+  }
 
-    @Patch('identificaciones/:id')
-    @ApiOperation({ summary: 'Actualizar identificación' })
-    async update(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('id', ParseBigIntPipe) id: bigint,
-        @Body() dto: UpdateIdentificacionDto,
-    ) {
-        return this.identificacionesService.update(empresaId, id, dto);
-    }
+  @Patch('identificaciones/:id')
+  @ApiOperation({ summary: 'Actualizar identificación' })
+  async update(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: UpdateIdentificacionDto,
+  ) {
+    return this.identificacionesService.update(empresaId, id, dto);
+  }
 
-    @Delete('identificaciones/:id')
-    @ApiOperation({ summary: 'Eliminar identificación' })
-    async remove(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('id', ParseBigIntPipe) id: bigint,
-    ) {
-        return this.identificacionesService.remove(empresaId, id);
-    }
+  @Delete('identificaciones/:id')
+  @ApiOperation({ summary: 'Eliminar identificación' })
+  async remove(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.identificacionesService.remove(empresaId, id);
+  }
 }

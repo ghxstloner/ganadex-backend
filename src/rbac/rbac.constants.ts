@@ -49,4 +49,3 @@ export const RBAC_PERMISSION_CODES = [
   'AUDITORIAS_CREAR',
   'AUDITORIAS_EDITAR',
 ] as const;
-

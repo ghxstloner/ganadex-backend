@@ -1,6 +1,10 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ADMIN_ROLE_CODE, OWNER_ROLE_CODE, RBAC_PERMISSION_CODES } from './rbac.constants';
+import {
+  ADMIN_ROLE_CODE,
+  OWNER_ROLE_CODE,
+  RBAC_PERMISSION_CODES,
+} from './rbac.constants';
 
 type BaseRolesResult = {
   ownerRoleId: bigint;
@@ -63,13 +67,13 @@ export const ensureEmpresaBaseRoles = async (
 
     await prisma.roles_permisos.createMany({
       data: permisosIds.map((id_permiso) => ({
-        id_rol: roleId!,
+        id_rol: roleId,
         id_permiso,
       })),
       skipDuplicates: true,
     });
 
-    return roleId!;
+    return roleId;
   };
 
   const ownerRoleId = await ensureRole(

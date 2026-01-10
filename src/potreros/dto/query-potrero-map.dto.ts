@@ -10,11 +10,10 @@ export class QueryPotreroMapDto {
   @IsString()
   q?: string;
 
-  // ✅ límite más alto para contexto de mapa
   @IsOptional()
-  @Type(() => Number)
+  @Type(() => Number) // Convierte "300" (string) a 300 (number)
   @IsInt()
   @Min(1)
-  @Max(500)
-  limit?: number;
+  @Max(1000) // Aumentamos un poco para mapas grandes
+  limit?: number = 300; // Valor por defecto en nivel de aplicación
 }

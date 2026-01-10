@@ -41,5 +41,4 @@ import { AuditoriasModule } from './auditorias/auditorias.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
-
+export class AppModule {}

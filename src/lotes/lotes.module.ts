@@ -5,9 +5,9 @@ import { AuthModule } from '../auth/auth.module';
 import { TenancyModule } from '../tenancy/tenancy.module';
 
 @Module({
-    imports: [AuthModule, TenancyModule],
-    controllers: [LotesController],
-    providers: [LotesService],
-    exports: [LotesService],
+  imports: [AuthModule, TenancyModule],
+  controllers: [LotesController],
+  providers: [LotesService],
+  exports: [LotesService],
 })
-export class LotesModule { }
+export class LotesModule {}

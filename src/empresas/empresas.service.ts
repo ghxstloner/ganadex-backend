@@ -55,7 +55,8 @@ export class EmpresasService {
   }
 
   async update(userId: bigint, empresaId: bigint, dto: EmpresaUpdateDto) {
-    const activeEmpresaId = await this.tenancyService.requireActiveEmpresaId(userId);
+    const activeEmpresaId =
+      await this.tenancyService.requireActiveEmpresaId(userId);
     if (activeEmpresaId !== empresaId) {
       throw new ForbiddenException('Empresa no pertenece al usuario');
     }
@@ -87,6 +88,4 @@ export class EmpresasService {
       logo_url: null,
     };
   }
-
-
 }

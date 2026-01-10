@@ -223,7 +223,12 @@ export class RolesService {
   }
 
   private mapRole(
-    role: { id_rol: bigint; codigo: string; nombre: string; descripcion: string | null },
+    role: {
+      id_rol: bigint;
+      codigo: string;
+      nombre: string;
+      descripcion: string | null;
+    },
     permisos: { id_permiso: bigint; codigo: string; nombre: string }[],
   ): RoleResponse {
     return {

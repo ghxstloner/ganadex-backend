@@ -5,9 +5,9 @@ import { AuthModule } from '../auth/auth.module';
 import { TenancyModule } from '../tenancy/tenancy.module';
 
 @Module({
-    imports: [AuthModule, TenancyModule],
-    controllers: [MovimientosController],
-    providers: [MovimientosService],
-    exports: [MovimientosService],
+  imports: [AuthModule, TenancyModule],
+  controllers: [MovimientosController],
+  providers: [MovimientosService],
+  exports: [MovimientosService],
 })
-export class MovimientosModule { }
+export class MovimientosModule {}

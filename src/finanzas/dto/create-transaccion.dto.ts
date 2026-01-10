@@ -1,23 +1,23 @@
 import { IsString, IsOptional, IsDateString, MaxLength } from 'class-validator';
 
 export class CreateTransaccionDto {
-    @IsDateString()
-    fecha: string;
+  @IsDateString()
+  fecha: string;
 
-    @IsString()
-    id_tipo_transaccion: string;
+  @IsString()
+  id_tipo_transaccion: string;
 
-    @IsString()
-    id_categoria_financiera: string;
+  @IsString()
+  id_categoria_financiera: string;
 
-    @IsString()
-    monto: string;
+  @IsString()
+  monto: string;
 
-    @IsOptional()
-    @IsString()
-    descripcion?: string;
+  @IsOptional()
+  @IsString()
+  descripcion?: string;
 
-    @IsOptional()
-    @IsString()
-    id_tercero?: string;
+  @IsOptional()
+  @IsString()
+  id_tercero?: string;
 }

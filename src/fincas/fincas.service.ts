@@ -8,7 +8,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { FincaCreateDto } from './dto/finca-create.dto';
 import { FincaListDto } from './dto/finca-list.dto';
-import { parsePaginationFromDto, paginatedResponse } from '../common/utils/pagination.util';
+import {
+  parsePaginationFromDto,
+  paginatedResponse,
+} from '../common/utils/pagination.util';
 import { FincaUpdateDto } from './dto/finca-update.dto';
 
 @Injectable()
@@ -19,7 +22,8 @@ export class FincasService {
   ) {}
 
   async list(userId: bigint, query: FincaListDto) {
-    const activeEmpresaId = await this.tenancyService.requireActiveEmpresaId(userId);
+    const activeEmpresaId =
+      await this.tenancyService.requireActiveEmpresaId(userId);
 
     if (query.empresa_id) {
       const requestedId = parseBigInt(query.empresa_id, 'empresa_id');
@@ -66,7 +70,8 @@ export class FincasService {
     if (dto.empresa_id) {
       empresaId = parseBigInt(dto.empresa_id, 'empresa_id');
       await this.tenancyService.assertEmpresaBelongs(userId, empresaId);
-      const activeEmpresaId = await this.tenancyService.getActiveEmpresaId(userId);
+      const activeEmpresaId =
+        await this.tenancyService.getActiveEmpresaId(userId);
       if (activeEmpresaId && BigInt(activeEmpresaId) !== empresaId) {
         throw new ForbiddenException('Empresa no pertenece al usuario');
       }
@@ -98,7 +103,8 @@ export class FincasService {
   }
 
   async update(userId: bigint, fincaId: bigint, dto: FincaUpdateDto) {
-    const activeEmpresaId = await this.tenancyService.requireActiveEmpresaId(userId);
+    const activeEmpresaId =
+      await this.tenancyService.requireActiveEmpresaId(userId);
 
     const existing = await this.prisma.fincas.findFirst({
       where: {

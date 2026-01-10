@@ -1,13 +1,13 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    Query,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -24,57 +24,59 @@ import { UpdateEventoReproductivoDto } from './dto/update-evento-reproductivo.dt
 @UseGuards(JwtAuthGuard, EmpresaActivaGuard)
 @Controller('reproduccion')
 export class ReproduccionController {
-    constructor(private readonly reproduccionService: ReproduccionService) { }
+  constructor(private readonly reproduccionService: ReproduccionService) {}
 
-    @Get('eventos')
-    @ApiOperation({ summary: 'Listar eventos reproductivos con paginación y filtros' })
-    async findAll(
-        @EmpresaActivaId() empresaId: bigint,
-        @Query() query: QueryEventoReproductivoDto,
-    ) {
-        return this.reproduccionService.findAll(empresaId, query);
-    }
+  @Get('eventos')
+  @ApiOperation({
+    summary: 'Listar eventos reproductivos con paginación y filtros',
+  })
+  async findAll(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query() query: QueryEventoReproductivoDto,
+  ) {
+    return this.reproduccionService.findAll(empresaId, query);
+  }
 
-    @Post('eventos')
-    @ApiOperation({ summary: 'Crear un nuevo evento reproductivo' })
-    async create(
-        @EmpresaActivaId() empresaId: bigint,
-        @Body() dto: CreateEventoReproductivoDto,
-    ) {
-        return this.reproduccionService.create(empresaId, dto);
-    }
+  @Post('eventos')
+  @ApiOperation({ summary: 'Crear un nuevo evento reproductivo' })
+  async create(
+    @EmpresaActivaId() empresaId: bigint,
+    @Body() dto: CreateEventoReproductivoDto,
+  ) {
+    return this.reproduccionService.create(empresaId, dto);
+  }
 
-    @Get('eventos/:id')
-    @ApiOperation({ summary: 'Obtener evento reproductivo por ID' })
-    async findOne(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('id', ParseBigIntPipe) id: bigint,
-    ) {
-        return this.reproduccionService.findOne(empresaId, id);
-    }
+  @Get('eventos/:id')
+  @ApiOperation({ summary: 'Obtener evento reproductivo por ID' })
+  async findOne(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.reproduccionService.findOne(empresaId, id);
+  }
 
-    @Patch('eventos/:id')
-    @ApiOperation({ summary: 'Actualizar evento reproductivo' })
-    async update(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('id', ParseBigIntPipe) id: bigint,
-        @Body() dto: UpdateEventoReproductivoDto,
-    ) {
-        return this.reproduccionService.update(empresaId, id, dto);
-    }
+  @Patch('eventos/:id')
+  @ApiOperation({ summary: 'Actualizar evento reproductivo' })
+  async update(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: UpdateEventoReproductivoDto,
+  ) {
+    return this.reproduccionService.update(empresaId, id, dto);
+  }
 
-    @Delete('eventos/:id')
-    @ApiOperation({ summary: 'Eliminar evento reproductivo' })
-    async remove(
-        @EmpresaActivaId() empresaId: bigint,
-        @Param('id', ParseBigIntPipe) id: bigint,
-    ) {
-        return this.reproduccionService.remove(empresaId, id);
-    }
+  @Delete('eventos/:id')
+  @ApiOperation({ summary: 'Eliminar evento reproductivo' })
+  async remove(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.reproduccionService.remove(empresaId, id);
+  }
 
-    @Get('semaforo')
-    @ApiOperation({ summary: 'Obtener dashboard reproductivo (semáforo)' })
-    async getSemaforo(@EmpresaActivaId() empresaId: bigint) {
-        return this.reproduccionService.getSemaforo(empresaId);
-    }
+  @Get('semaforo')
+  @ApiOperation({ summary: 'Obtener dashboard reproductivo (semáforo)' })
+  async getSemaforo(@EmpresaActivaId() empresaId: bigint) {
+    return this.reproduccionService.getSemaforo(empresaId);
+  }
 }

@@ -624,6 +624,8 @@ model potreros {
   id_estado_potrero                                                                 BigInt?                @db.UnsignedBigInt
   capacidad_animales                                                                Decimal?               @db.Decimal(12, 2)
   notas                                                                             String?                @db.Text
+  created_at                                                                        DateTime               @default(now()) @db.Timestamp(0)
+  updated_at                                                                        DateTime               @default(now()) @db.Timestamp(0)
   movimientos_animales_movimientos_animales_potrero_destino_id_empresa_idTopotreros movimientos_animales[] @relation("movimientos_animales_potrero_destino_id_empresa_idTopotreros")
   movimientos_animales_movimientos_animales_potrero_origen_id_empresa_idTopotreros  movimientos_animales[] @relation("movimientos_animales_potrero_origen_id_empresa_idTopotreros")
   ocupacion_potreros                                                                ocupacion_potreros[]

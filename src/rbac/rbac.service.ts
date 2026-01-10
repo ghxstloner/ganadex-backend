@@ -18,7 +18,10 @@ export class RbacService {
     }));
   }
 
-  async getUserPermissions(userId: bigint, empresaId: bigint): Promise<string[]> {
+  async getUserPermissions(
+    userId: bigint,
+    empresaId: bigint,
+  ): Promise<string[]> {
     const relation = await this.prisma.usuario_empresas.findFirst({
       where: {
         id_usuario: userId,

@@ -1,5 +1,11 @@
 import { Transform } from 'class-transformer';
-import { ArrayNotEmpty, IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { trimOrUndefined } from '../../common/utils/trim-or-undefined';
 
 export class RoleCreateDto {
