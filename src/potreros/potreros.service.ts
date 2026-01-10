@@ -5,6 +5,7 @@ import { parsePagination, parsePaginationFromDto, paginatedResponse } from '../c
 import { CreatePotreroDto } from './dto/create-potrero.dto';
 import { QueryPotreroDto } from './dto/query-potrero.dto';
 import { UpdatePotreroDto } from './dto/update-potrero.dto';
+import { QueryPotreroMapDto } from './dto/query-potrero-map.dto';
 
 @Injectable()
 export class PotrerosService {
@@ -250,4 +251,41 @@ export class PotrerosService {
             notas: potrero.notas,
         };
     }
+
+    async findMapContext(empresaId: bigint, query: QueryPotreroMapDto) {
+        const where: Record<string, unknown> = { empresa_id: empresaId };
+      
+        if (query.id_finca) {
+          where.id_finca = parseBigInt(query.id_finca, 'id_finca');
+        }
+      
+        if (query.q) {
+          where.nombre = { contains: query.q };
+        }
+      
+        const take = query.limit ? Number(query.limit) : 200; // ✅ default pro
+      
+        const data = await this.prisma.potreros.findMany({
+          where,
+          take,
+          orderBy: { nombre: 'asc' },
+          select: {
+            id_potrero: true,
+            nombre: true,
+            geometry: true,
+          },
+        });
+      
+        // ✅ respuesta mínima y consistente
+        return {
+          items: data.map((p) => ({
+            id: p.id_potrero.toString(),
+            nombre: p.nombre,
+            geometry: p.geometry ?? null,
+          })),
+          meta: {
+            limit: take,
+          },
+        };
+      }
 }

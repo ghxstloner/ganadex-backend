@@ -18,6 +18,7 @@ import { PotrerosService } from './potreros.service';
 import { CreatePotreroDto } from './dto/create-potrero.dto';
 import { QueryPotreroDto } from './dto/query-potrero.dto';
 import { UpdatePotreroDto } from './dto/update-potrero.dto';
+import { QueryPotreroMapDto } from './dto/query-potrero-map.dto';
 
 @ApiTags('Potreros')
 @ApiBearerAuth('JWT-auth')
@@ -76,5 +77,14 @@ export class PotrerosController {
         @Param('id', ParseBigIntPipe) id: bigint,
     ) {
         return this.potrerosService.remove(empresaId, id);
+    }
+
+    @Get('map')
+    @ApiOperation({ summary: 'Listar potreros mínimo para mapa (id, nombre, geometry)' })
+    async getMapContext(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query() query: QueryPotreroMapDto,
+    ) {
+    return this.potrerosService.findMapContext(empresaId, query);
     }
 }
