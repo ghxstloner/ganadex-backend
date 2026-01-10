@@ -1,4 +1,13 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsArray, ValidateNested, IsObject } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class GeometryPointDto {
+    @IsOptional()
+    lat?: number;
+
+    @IsOptional()
+    lng?: number;
+}
 
 export class CreatePotreroDto {
     @IsString()
@@ -11,6 +20,16 @@ export class CreatePotreroDto {
     @IsOptional()
     @IsString()
     area_hectareas?: string;
+
+    @IsOptional()
+    @IsString()
+    area_m2?: string;
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => GeometryPointDto)
+    geometry?: Array<{ lat: number; lng: number }>;
 
     @IsOptional()
     @IsString()

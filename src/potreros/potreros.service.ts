@@ -78,6 +78,12 @@ export class PotrerosService {
         if (dto.area_hectareas) {
             data.area_hectareas = parseFloat(dto.area_hectareas);
         }
+        if (dto.area_m2) {
+            data.area_m2 = parseFloat(dto.area_m2);
+        }
+        if (dto.geometry && Array.isArray(dto.geometry) && dto.geometry.length > 0) {
+            data.geometry = dto.geometry;
+        }
         if (dto.id_tipo_potrero) {
             data.id_tipo_potrero = parseBigInt(dto.id_tipo_potrero, 'id_tipo_potrero');
         }
@@ -128,6 +134,12 @@ export class PotrerosService {
         if (dto.notas !== undefined) data.notas = dto.notas;
         if (dto.area_hectareas !== undefined) {
             data.area_hectareas = dto.area_hectareas ? parseFloat(dto.area_hectareas) : null;
+        }
+        if (dto.area_m2 !== undefined) {
+            data.area_m2 = dto.area_m2 ? parseFloat(dto.area_m2) : null;
+        }
+        if (dto.geometry !== undefined) {
+            data.geometry = dto.geometry && Array.isArray(dto.geometry) && dto.geometry.length > 0 ? dto.geometry : null;
         }
         if (dto.id_tipo_potrero !== undefined) {
             data.id_tipo_potrero = dto.id_tipo_potrero ? parseBigInt(dto.id_tipo_potrero, 'id_tipo_potrero') : null;
@@ -210,6 +222,8 @@ export class PotrerosService {
             id_finca: bigint;
             nombre: string;
             area_hectareas: { toString: () => string } | null;
+            area_m2: { toString: () => string } | null;
+            geometry: Array<{ lat: number; lng: number }> | null;
             capacidad_animales: { toString: () => string } | null;
             id_tipo_potrero: bigint | null;
             id_estado_potrero: bigint | null;
@@ -226,6 +240,8 @@ export class PotrerosService {
             finca_nombre: potrero.fincas?.nombre ?? null,
             nombre: potrero.nombre,
             area_hectareas: potrero.area_hectareas?.toString() ?? null,
+            area_m2: potrero.area_m2?.toString() ?? null,
+            geometry: potrero.geometry ?? null,
             capacidad_animales: potrero.capacidad_animales?.toString() ?? null,
             id_tipo_potrero: potrero.id_tipo_potrero?.toString() ?? null,
             tipo_nombre: potrero.tipos_potrero?.nombre ?? null,

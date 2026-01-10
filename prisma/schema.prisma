@@ -618,6 +618,8 @@ model potreros {
   id_finca                                                                          BigInt                 @db.UnsignedBigInt
   nombre                                                                            String                 @db.VarChar(160)
   area_hectareas                                                                    Decimal?               @db.Decimal(12, 2)
+  area_m2                                                                           Decimal?               @db.Decimal(15, 2)
+  geometry                                                                          Json?                  @db.Json
   id_tipo_potrero                                                                   BigInt?                @db.UnsignedBigInt
   id_estado_potrero                                                                 BigInt?                @db.UnsignedBigInt
   capacidad_animales                                                                Decimal?               @db.Decimal(12, 2)
