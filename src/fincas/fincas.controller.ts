@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -35,6 +36,7 @@ export class FincasController {
     return this.fincasService.create(userId, dto);
   }
 
+  @Put(':id')
   @Patch(':id')
   async update(
     @Req() request: Request,

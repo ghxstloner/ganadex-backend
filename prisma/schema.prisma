@@ -486,15 +486,39 @@ model metodos_auditoria {
 }
 
 model monedas {
-  id_moneda                                            BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
-  codigo                                               String                @unique(map: "uq_monedas_codigo") @db.VarChar(10)
-  nombre                                               String                @db.VarChar(80)
-  simbolo                                              String?               @db.VarChar(10)
-  fincas                                               fincas[]
-  liquidaciones_leche                                  liquidaciones_leche[]
-  tasas_cambio_tasas_cambio_moneda_destino_idTomonedas tasas_cambio[]        @relation("tasas_cambio_moneda_destino_idTomonedas")
-  tasas_cambio_tasas_cambio_moneda_origen_idTomonedas  tasas_cambio[]        @relation("tasas_cambio_moneda_origen_idTomonedas")
+  id_moneda         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+
+  iso_alpha3        String   @db.Char(3)
+  iso_num           String?  @db.Char(3)
+  nombre            String   @db.VarChar(80)
+  nombre_plural     String?  @db.VarChar(80)
+  simbolo           String?  @db.VarChar(12)
+  simbolo_nativo    String?  @db.VarChar(12)
+  simbolo_html      String?  @db.VarChar(32)
+  unicode_symbol    String?  @db.VarChar(16)
+  decimales         Int      @default(2) @db.UnsignedTinyInt
+  subunidad_nombre  String?  @db.VarChar(40)
+  subunidad_factor  Int      @default(100) @db.UnsignedInt
+  separador_decimal String   @default(".") @db.Char(1)
+  separador_miles   String   @default(",") @db.Char(1)
+  formato           String?  @db.VarChar(40)
+  redondeo          Decimal  @default(0.000000) @db.Decimal(10, 6)
+  es_cripto         Boolean  @default(false)
+  activo            Boolean  @default(true)
+
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+  updated_at        DateTime @default(now()) @db.Timestamp(0)
+
+  fincas               fincas[]
+  liquidaciones_leche  liquidaciones_leche[]
+  tasas_cambio_origen  tasas_cambio[] @relation("tasas_cambio_moneda_origen_idTomonedas")
+  tasas_cambio_destino tasas_cambio[] @relation("tasas_cambio_moneda_destino_idTomonedas")
+
+  @@unique([iso_alpha3], map: "uq_monedas_iso_alpha3")
+  @@index([activo], map: "idx_monedas_activo")
+  @@index([iso_num], map: "idx_monedas_iso_num")
 }
+
 
 model motivos_movimiento {
   id_motivo_movimiento BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
@@ -579,6 +603,15 @@ model planes {
   empresas    empresas[]
 }
 
+model estados_potreros {
+  id_estado_potrero BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  codigo            String     @unique @db.VarChar(60)
+  nombre            String     @db.VarChar(140)
+  orden             Int        @default(0)
+  activo            Boolean    @default(true)
+  potreros          potreros[]
+}
+
 model potreros {
   id_potrero                                                                        BigInt                 @default(autoincrement()) @db.UnsignedBigInt
   empresa_id                                                                        BigInt                 @db.UnsignedBigInt
@@ -586,17 +619,21 @@ model potreros {
   nombre                                                                            String                 @db.VarChar(160)
   area_hectareas                                                                    Decimal?               @db.Decimal(12, 2)
   id_tipo_potrero                                                                   BigInt?                @db.UnsignedBigInt
+  id_estado_potrero                                                                 BigInt?                @db.UnsignedBigInt
+  capacidad_animales                                                                Decimal?               @db.Decimal(12, 2)
   notas                                                                             String?                @db.Text
   movimientos_animales_movimientos_animales_potrero_destino_id_empresa_idTopotreros movimientos_animales[] @relation("movimientos_animales_potrero_destino_id_empresa_idTopotreros")
   movimientos_animales_movimientos_animales_potrero_origen_id_empresa_idTopotreros  movimientos_animales[] @relation("movimientos_animales_potrero_origen_id_empresa_idTopotreros")
   ocupacion_potreros                                                                ocupacion_potreros[]
   fincas                                                                            fincas                 @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_potreros_finca")
   tipos_potrero                                                                     tipos_potrero?         @relation(fields: [id_tipo_potrero], references: [id_tipo_potrero], map: "fk_potreros_tipo")
+  estados_potreros                                                                  estados_potreros?      @relation(fields: [id_estado_potrero], references: [id_estado_potrero], map: "fk_potreros_estado")
 
   @@id([id_potrero, empresa_id])
   @@unique([empresa_id, id_finca, nombre], map: "uq_potreros_empresa_finca_nombre")
   @@index([id_finca, empresa_id], map: "idx_potreros_finca")
   @@index([id_tipo_potrero], map: "idx_potreros_tipo")
+  @@index([id_estado_potrero], map: "idx_potreros_estado")
 }
 
 model produccion_leche {

@@ -194,14 +194,25 @@ export class FinanzasService {
 
     async getMonedas() {
         const monedas = await this.prisma.monedas.findMany({
-            orderBy: { codigo: 'asc' },
+            where: { activo: true },
+            select: {
+                id_moneda: true,
+                iso_alpha3: true,
+                nombre: true,
+                simbolo: true,
+                decimales: true,
+                activo: true,
+            },
+            orderBy: { nombre: 'asc' },
         });
 
         return monedas.map((m) => ({
             id: m.id_moneda.toString(),
-            codigo: m.codigo,
+            iso_alpha3: m.iso_alpha3,
             nombre: m.nombre,
             simbolo: m.simbolo,
+            decimales: m.decimales,
+            activo: m.activo,
         }));
     }
 }

@@ -26,6 +26,12 @@ import { UpdatePotreroDto } from './dto/update-potrero.dto';
 export class PotrerosController {
     constructor(private readonly potrerosService: PotrerosService) { }
 
+    @Get('estados/list')
+    @ApiOperation({ summary: 'Listar estados de potreros (catálogo global)' })
+    async getEstados() {
+        return this.potrerosService.getEstados();
+    }
+
     @Get()
     @ApiOperation({ summary: 'Listar potreros con paginación y filtros' })
     async findAll(

@@ -135,7 +135,7 @@ export class LecheService {
             include: {
                 fincas: { select: { nombre: true } },
                 centros_recepcion: { select: { nombre: true } },
-                monedas: { select: { codigo: true, simbolo: true } },
+                monedas: { select: { iso_alpha3: true, simbolo: true } },
             },
         });
 
@@ -150,8 +150,8 @@ export class LecheService {
             litros_pagados: l.litros_pagados.toString(),
             precio_por_litro: l.precio_por_litro?.toString() ?? null,
             monto_pagado: l.monto_pagado?.toString() ?? null,
-            moneda: l.monedas.codigo,
-            moneda_simbolo: l.monedas.simbolo,
+            moneda: l.monedas.iso_alpha3,
+            moneda_simbolo: l.monedas.simbolo ?? "",
         }));
     }
 

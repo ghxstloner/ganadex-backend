@@ -31,6 +31,7 @@ export class PotrerosService {
                 include: {
                     fincas: { select: { nombre: true } },
                     tipos_potrero: { select: { nombre: true } },
+                    estados_potreros: { select: { nombre: true, codigo: true } },
                 },
             }),
             this.prisma.potreros.count({ where }),
@@ -46,6 +47,7 @@ export class PotrerosService {
             include: {
                 fincas: { select: { nombre: true } },
                 tipos_potrero: { select: { nombre: true } },
+                estados_potreros: { select: { nombre: true, codigo: true } },
             },
         });
 
@@ -79,12 +81,32 @@ export class PotrerosService {
         if (dto.id_tipo_potrero) {
             data.id_tipo_potrero = parseBigInt(dto.id_tipo_potrero, 'id_tipo_potrero');
         }
+        // El frontend envía estado como string, buscar por codigo o nombre y resolver a id_estado_potrero
+        // estados_potreros es un catálogo global (sin empresa_id)
+        if (dto.estado) {
+            const estadoPotrero = await this.prisma.estados_potreros.findFirst({
+                where: {
+                    OR: [
+                        { codigo: dto.estado },
+                        { nombre: dto.estado },
+                    ],
+                    activo: true,
+                },
+            });
+            if (estadoPotrero) {
+                data.id_estado_potrero = estadoPotrero.id_estado_potrero;
+            }
+        }
+        if (dto.capacidad_animales) {
+            data.capacidad_animales = parseFloat(dto.capacidad_animales);
+        }
 
         const potrero = await this.prisma.potreros.create({
             data: data as Parameters<typeof this.prisma.potreros.create>[0]['data'],
             include: {
                 fincas: { select: { nombre: true } },
                 tipos_potrero: { select: { nombre: true } },
+                estados_potreros: { select: { nombre: true, codigo: true } },
             },
         });
 
@@ -110,6 +132,27 @@ export class PotrerosService {
         if (dto.id_tipo_potrero !== undefined) {
             data.id_tipo_potrero = dto.id_tipo_potrero ? parseBigInt(dto.id_tipo_potrero, 'id_tipo_potrero') : null;
         }
+        // El frontend envía estado como string, buscar por codigo o nombre y resolver a id_estado_potrero
+        // estados_potreros es un catálogo global (sin empresa_id)
+        if (dto.estado !== undefined) {
+            if (dto.estado) {
+                const estadoPotrero = await this.prisma.estados_potreros.findFirst({
+                    where: {
+                        OR: [
+                            { codigo: dto.estado },
+                            { nombre: dto.estado },
+                        ],
+                        activo: true,
+                    },
+                });
+                data.id_estado_potrero = estadoPotrero ? estadoPotrero.id_estado_potrero : null;
+            } else {
+                data.id_estado_potrero = null;
+            }
+        }
+        if (dto.capacidad_animales !== undefined) {
+            data.capacidad_animales = dto.capacidad_animales ? parseFloat(dto.capacidad_animales) : null;
+        }
 
         const potrero = await this.prisma.potreros.update({
             where: { id_potrero_empresa_id: { id_potrero: id, empresa_id: empresaId } },
@@ -117,6 +160,7 @@ export class PotrerosService {
             include: {
                 fincas: { select: { nombre: true } },
                 tipos_potrero: { select: { nombre: true } },
+                estados_potreros: { select: { nombre: true, codigo: true } },
             },
         });
 
@@ -139,6 +183,26 @@ export class PotrerosService {
         return { deleted: true };
     }
 
+    async getEstados() {
+        const estados = await this.prisma.estados_potreros.findMany({
+            where: { activo: true },
+            orderBy: { orden: 'asc' },
+            select: {
+                id_estado_potrero: true,
+                codigo: true,
+                nombre: true,
+                orden: true,
+            },
+        });
+
+        return estados.map((e) => ({
+            id: e.id_estado_potrero.toString(),
+            codigo: e.codigo,
+            nombre: e.nombre,
+            orden: e.orden,
+        }));
+    }
+
     private mapPotrero(p: Record<string, unknown>) {
         const potrero = p as {
             id_potrero: bigint;
@@ -146,10 +210,13 @@ export class PotrerosService {
             id_finca: bigint;
             nombre: string;
             area_hectareas: { toString: () => string } | null;
+            capacidad_animales: { toString: () => string } | null;
             id_tipo_potrero: bigint | null;
+            id_estado_potrero: bigint | null;
             notas: string | null;
             fincas?: { nombre: string };
             tipos_potrero?: { nombre: string } | null;
+            estados_potreros?: { nombre: string; codigo: string } | null;
         };
 
         return {
@@ -159,8 +226,11 @@ export class PotrerosService {
             finca_nombre: potrero.fincas?.nombre ?? null,
             nombre: potrero.nombre,
             area_hectareas: potrero.area_hectareas?.toString() ?? null,
+            capacidad_animales: potrero.capacidad_animales?.toString() ?? null,
             id_tipo_potrero: potrero.id_tipo_potrero?.toString() ?? null,
             tipo_nombre: potrero.tipos_potrero?.nombre ?? null,
+            id_estado_potrero: potrero.id_estado_potrero?.toString() ?? null,
+            estado: potrero.estados_potreros?.codigo ?? potrero.estados_potreros?.nombre ?? null,
             notas: potrero.notas,
         };
     }

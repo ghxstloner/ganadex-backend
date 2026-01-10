@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsDecimal, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength } from 'class-validator';
 
 export class CreatePotreroDto {
     @IsString()
@@ -15,6 +15,15 @@ export class CreatePotreroDto {
     @IsOptional()
     @IsString()
     id_tipo_potrero?: string;
+
+    // El frontend envía estado como string, el backend lo resuelve a id_estado_potrero
+    @IsOptional()
+    @IsString()
+    estado?: string;
+
+    @IsOptional()
+    @IsString()
+    capacidad_animales?: string;
 
     @IsOptional()
     @IsString()

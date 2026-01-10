@@ -36,11 +36,59 @@ async function main() {
 
   // 1. Monedas
   await prisma.$executeRawUnsafe(`
-    INSERT INTO monedas (codigo, nombre, simbolo) VALUES
-      ('COP','Peso colombiano','$'),
-      ('USD','Dólar estadounidense','$'),
-      ('VES','Bolívar venezolano','Bs.')
-    ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), simbolo=VALUES(simbolo);
+    INSERT IGNORE INTO \`monedas\` (
+      \`id_moneda\`,
+      \`iso_alpha3\`,
+      \`iso_num\`,
+      \`nombre\`,
+      \`nombre_plural\`,
+      \`simbolo\`,
+      \`simbolo_nativo\`,
+      \`simbolo_html\`,
+      \`unicode_symbol\`,
+      \`decimales\`,
+      \`subunidad_nombre\`,
+      \`subunidad_factor\`,
+      \`separador_decimal\`,
+      \`separador_miles\`,
+      \`formato\`,
+      \`redondeo\`,
+      \`es_cripto\`,
+      \`activo\`,
+      \`created_at\`,
+      \`updated_at\`
+    ) VALUES
+    (1,'USD','840','Dólar estadounidense','Dólares estadounidenses','$','$','&dollar;','$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (2,'EUR','978','Euro','Euros','€','€','&euro;','€',2,'céntimo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (3,'MXN','484','Peso mexicano','Pesos mexicanos','$','$',NULL,'$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (4,'GTQ','320','Quetzal guatemalteco','Quetzales guatemaltecos','Q','Q',NULL,'Q',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (5,'HNL','340','Lempira hondureña','Lempiras hondureñas','L','L',NULL,'L',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (6,'NIO','558','Córdoba nicaragüense','Córdobas nicaragüenses','C$','C$',NULL,'C$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (7,'CRC','188','Colón costarricense','Colones costarricenses','₡','₡',NULL,'₡',2,'céntimo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (8,'PAB','590','Balboa panameño','Balboas','B/.','B/.',NULL,'B/.',2,'centésimo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (9,'BZD','084','Dólar beliceño','Dólares beliceños','BZ$','BZ$',NULL,'BZ$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (10,'SVC','222','Colón salvadoreño','Colones salvadoreños','₡','₡',NULL,'₡',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,0,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (11,'CUP','192','Peso cubano','Pesos cubanos','$','$',NULL,'$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (12,'DOP','214','Peso dominicano','Pesos dominicanos','RD$','RD$',NULL,'RD$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (13,'HTG','332','Gourde haitiano','Gourdes haitianos','G','G',NULL,'G',2,'céntimo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (14,'JMD','388','Dólar jamaiquino','Dólares jamaiquinos','J$','J$',NULL,'J$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (15,'TTD','780','Dólar de Trinidad y Tobago','Dólares de Trinidad y Tobago','TT$','TT$',NULL,'TT$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (16,'BSD','044','Dólar bahameño','Dólares bahameños','B$','B$',NULL,'B$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (17,'BBD','052','Dólar barbadense','Dólares barbadenses','Bds$','Bds$',NULL,'Bds$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (18,'XCD','951','Dólar del Caribe Oriental','Dólares del Caribe Oriental','EC$','EC$',NULL,'EC$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (19,'AWG','533','Florín arubeño','Florines arubeños','Afl.','Afl.',NULL,'ƒ',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (20,'ANG','532','Florín antillano neerlandés','Florines antillanos neerlandeses','NAf.','NAf.',NULL,'ƒ',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (21,'ARS','032','Peso argentino','Pesos argentinos','$','$',NULL,'$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (22,'BOB','068','Boliviano','Bolivianos','Bs.','Bs.',NULL,'Bs',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (23,'BRL','986','Real brasileño','Reales brasileños','R$','R$',NULL,'R$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (24,'CLP','152','Peso chileno','Pesos chilenos','$','$',NULL,'$',0,NULL,1,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (25,'COP','170','Peso colombiano','Pesos colombianos','$','$',NULL,'$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (26,'PYG','600','Guaraní paraguayo','Guaraníes paraguayos','₲','₲',NULL,'₲',0,NULL,1,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (27,'PEN','604','Sol peruano','Soles peruanos','S/','S/',NULL,'S/',2,'céntimo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (28,'UYU','858','Peso uruguayo','Pesos uruguayos','$U','$U',NULL,'$U',2,'centésimo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (29,'VES','928','Bolívar soberano','Bolívares soberanos','Bs.','Bs.',NULL,'Bs',2,'céntimo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (30,'GYD','328','Dólar guyanés','Dólares guyaneses','G$','G$',NULL,'G$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35'),
+    (31,'SRD','968','Dólar surinamés','Dólares surinameses','$','$',NULL,'$',2,'centavo',100,'.',',','{symbol}{amount}',0.000000,0,1,'2025-12-19 16:27:35','2025-12-19 16:27:35');
   `)
 
   // 2. Ambitos Rol
@@ -181,6 +229,16 @@ async function main() {
       ('completado','Completado',2),
       ('cancelado','Cancelado',3)
     ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), orden=VALUES(orden);
+  `)
+
+  // 16.1. Estados Potreros (catálogo global)
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO estados_potreros (codigo, nombre, orden, activo) VALUES
+      ('disponible','Disponible',10,1),
+      ('ocupado','Ocupado',20,1),
+      ('mantenimiento','Mantenimiento',30,1),
+      ('inactivo','Inactivo',40,1)
+    ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), orden=VALUES(orden), activo=VALUES(activo);
   `)
 
   // 17. Tipos de Retiro
