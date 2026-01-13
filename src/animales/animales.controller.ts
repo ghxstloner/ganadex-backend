@@ -12,7 +12,6 @@ import {
   UploadedFile,
   ParseFilePipe,
   MaxFileSizeValidator,
-  FileTypeValidator,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -68,8 +67,14 @@ export class AnimalesController {
     @EmpresaActivaId() empresaId: bigint,
     @Query('q') query: string,
     @Query('sexo') sexo?: 'M' | 'F',
+    @Query('exclude_id') excludeId?: string,
   ) {
-    return this.animalesService.buscarAnimales(empresaId, query ?? '', sexo);
+    return this.animalesService.buscarAnimales(
+      empresaId,
+      query ?? '',
+      sexo,
+      excludeId,
+    );
   }
 
   @Get()
@@ -139,13 +144,21 @@ export class AnimalesController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
-          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }), // 10MB
         ],
       }),
     )
     file: Express.Multer.File,
   ) {
     return this.animalesService.uploadPhoto(empresaId, id, file);
+  }
+
+  @Delete(':id/foto')
+  @ApiOperation({ summary: 'Eliminar foto del animal' })
+  async deletePhoto(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.animalesService.deletePhoto(empresaId, id);
   }
 }

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
@@ -158,6 +159,12 @@ export class AnimalesService {
           fincas: { select: { nombre: true, id_finca: true } },
           razas: { select: { nombre: true, id_raza: true } },
           colores_pelaje: { select: { id_color: true, nombre: true } },
+          animales_animales_padre_id_empresa_idToanimales: {
+            select: { id_animal: true, nombre: true },
+          },
+          animales_animales_madre_id_empresa_idToanimales: {
+            select: { id_animal: true, nombre: true },
+          },
         },
       }),
       this.prisma.animales.count({ where }),
@@ -366,6 +373,13 @@ export class AnimalesService {
       include: {
         fincas: { select: { nombre: true, id_finca: true } },
         razas: { select: { nombre: true, id_raza: true } },
+        colores_pelaje: { select: { id_color: true, nombre: true } },
+        animales_animales_padre_id_empresa_idToanimales: {
+          select: { id_animal: true, nombre: true },
+        },
+        animales_animales_madre_id_empresa_idToanimales: {
+          select: { id_animal: true, nombre: true },
+        },
       },
     });
 
@@ -430,6 +444,12 @@ export class AnimalesService {
         fincas: { select: { nombre: true, id_finca: true } },
         razas: { select: { nombre: true, id_raza: true } },
         colores_pelaje: { select: { id_color: true, nombre: true } },
+        animales_animales_padre_id_empresa_idToanimales: {
+          select: { id_animal: true, nombre: true },
+        },
+        animales_animales_madre_id_empresa_idToanimales: {
+          select: { id_animal: true, nombre: true },
+        },
       },
     });
 
@@ -550,6 +570,11 @@ export class AnimalesService {
       throw new NotFoundException('Animal no encontrado');
     }
 
+    // Validar que el archivo sea una imagen
+    if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('El archivo debe ser una imagen');
+    }
+
     // Eliminar foto anterior si existe
     if (animal.foto_url) {
       await this.uploadService.deleteAnimalPhoto(animal.foto_url);
@@ -576,10 +601,39 @@ export class AnimalesService {
     return { foto_url: fotoUrl };
   }
 
+  async deletePhoto(empresaId: bigint, animalId: bigint) {
+    const animal = await this.prisma.animales.findFirst({
+      where: { id_animal: animalId, empresa_id: empresaId },
+    });
+
+    if (!animal) {
+      throw new NotFoundException('Animal no encontrado');
+    }
+
+    // Eliminar foto del sistema de archivos si existe
+    if (animal.foto_url) {
+      await this.uploadService.deleteAnimalPhoto(animal.foto_url);
+    }
+
+    // Actualizar animal eliminando la URL de la foto
+    await this.prisma.animales.update({
+      where: {
+        id_animal_empresa_id: {
+          id_animal: animalId,
+          empresa_id: empresaId,
+        },
+      },
+      data: { foto_url: null },
+    });
+
+    return { deleted: true };
+  }
+
   async buscarAnimales(
     empresaId: bigint,
     query: string,
     sexo?: 'M' | 'F',
+    excludeId?: string,
   ) {
     const where: Record<string, unknown> = {
       empresa_id: empresaId,
@@ -587,6 +641,11 @@ export class AnimalesService {
 
     if (sexo) {
       where.sexo = sexo;
+    }
+
+    // Excluir el animal actual si se está editando
+    if (excludeId) {
+      where.id_animal = { not: parseBigInt(excludeId, 'exclude_id') };
     }
 
     if (query) {
@@ -657,6 +716,11 @@ export class AnimalesService {
       } | null;
     };
 
+    // Formatear fecha_nacimiento a formato yyyy-MM-dd
+    const fechaNacimientoFormatted = a.fecha_nacimiento
+      ? a.fecha_nacimiento.toISOString().split('T')[0]
+      : null;
+
     return {
       id: a.id_animal.toString(),
       empresa_id: a.empresa_id.toString(),
@@ -664,7 +728,7 @@ export class AnimalesService {
       finca_nombre: a.fincas?.nombre ?? null,
       nombre: a.nombre,
       sexo: a.sexo,
-      fecha_nacimiento: a.fecha_nacimiento,
+      fecha_nacimiento: fechaNacimientoFormatted,
       fecha_nacimiento_estimada: a.fecha_nacimiento_estimada,
       id_raza: a.id_raza?.toString() ?? null,
       raza_nombre: a.razas?.nombre ?? null,
