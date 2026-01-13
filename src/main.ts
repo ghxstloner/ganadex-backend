@@ -2,12 +2,14 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
   const corsOrigins = (configService.get<string>('CORS_ORIGIN') ?? '')
     .split(',')
@@ -16,6 +18,11 @@ async function bootstrap() {
   app.enableCors({
     origin: corsOrigins.length ? corsOrigins : false,
     credentials: true,
+  });
+
+  // Servir archivos estáticos desde la carpeta uploads
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
   });
 
   // Global pipes, filters, interceptors

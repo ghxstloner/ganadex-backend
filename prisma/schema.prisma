@@ -90,6 +90,7 @@ model animales {
   id_color_pelaje                                                                BigInt?                       @db.UnsignedBigInt
   padre_id                                                                        BigInt?                       @db.UnsignedBigInt
   madre_id                                                                        BigInt?                       @db.UnsignedBigInt
+  foto_url                                                                        String?                       @db.VarChar(500)
   notas                                                                           String?                       @db.Text
   created_at                                                                      DateTime                      @default(now()) @db.Timestamp(0)
   updated_at                                                                      DateTime                      @default(now()) @db.Timestamp(0)

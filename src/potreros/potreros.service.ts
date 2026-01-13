@@ -252,6 +252,7 @@ export class PotrerosService {
       id_tipo_potrero: bigint | null;
       id_estado_potrero: bigint | null;
       notas: string | null;
+      created_at: Date;
       fincas?: { nombre: string };
       tipos_potrero?: { nombre: string } | null;
       estados_potreros?: { nombre: string; codigo: string } | null;
@@ -275,6 +276,7 @@ export class PotrerosService {
         potrero.estados_potreros?.nombre ??
         null,
       notas: potrero.notas,
+      created_at: potrero.created_at,
     };
   }
 

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
 import {
@@ -10,10 +14,16 @@ import {
 import { CreateAnimalDto } from './dto/create-animal.dto';
 import { QueryAnimalDto } from './dto/query-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
+import { CreateRazaDto } from './dto/create-raza.dto';
+import { CreateColorDto } from './dto/create-color.dto';
+import { UploadService } from '../common/services/upload.service';
 
 @Injectable()
 export class AnimalesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadService: UploadService,
+  ) {}
 
   async findAll(empresaId: bigint, query: QueryAnimalDto) {
     const pagination = parsePaginationFromDto(query);
@@ -38,6 +48,36 @@ export class AnimalesService {
     }
     if (query.id_raza) {
       where.id_raza = parseBigInt(query.id_raza, 'id_raza');
+    }
+    if (query.id_color_pelaje) {
+      where.id_color_pelaje = parseBigInt(query.id_color_pelaje, 'id_color_pelaje');
+    }
+    if (query.fecha_nacimiento_desde || query.fecha_nacimiento_hasta) {
+      where.fecha_nacimiento = {};
+      if (query.fecha_nacimiento_desde) {
+        (where.fecha_nacimiento as Record<string, unknown>).gte = new Date(
+          query.fecha_nacimiento_desde,
+        );
+      }
+      if (query.fecha_nacimiento_hasta) {
+        (where.fecha_nacimiento as Record<string, unknown>).lte = new Date(
+          query.fecha_nacimiento_hasta,
+        );
+      }
+    }
+    if (query.con_padre !== undefined) {
+      if (query.con_padre) {
+        where.padre_id = { not: null };
+      } else {
+        where.padre_id = null;
+      }
+    }
+    if (query.con_madre !== undefined) {
+      if (query.con_madre) {
+        where.madre_id = { not: null };
+      } else {
+        where.madre_id = null;
+      }
     }
     if (query.id_estado) {
       // Check if id_estado is a number (ID) or string (codigo)
@@ -66,7 +106,18 @@ export class AnimalesService {
     }
 
     if (query.q) {
-      where.nombre = { contains: query.q };
+      // Search by name or by active identification
+      where.OR = [
+        { nombre: { contains: query.q } },
+        {
+          animal_identificaciones: {
+            some: {
+              valor: { contains: query.q },
+              activo: true,
+            },
+          },
+        },
+      ];
     }
 
     if (query.solo_activos) {
@@ -106,6 +157,7 @@ export class AnimalesService {
         include: {
           fincas: { select: { nombre: true, id_finca: true } },
           razas: { select: { nombre: true, id_raza: true } },
+          colores_pelaje: { select: { id_color: true, nombre: true } },
         },
       }),
       this.prisma.animales.count({ where }),
@@ -121,6 +173,7 @@ export class AnimalesService {
       include: {
         fincas: { select: { nombre: true, id_finca: true } },
         razas: { select: { nombre: true, id_raza: true } },
+        colores_pelaje: { select: { id_color: true, nombre: true } },
         animales_animales_padre_id_empresa_idToanimales: {
           select: { id_animal: true, nombre: true },
         },
@@ -143,6 +196,7 @@ export class AnimalesService {
       include: {
         fincas: { select: { nombre: true, id_finca: true } },
         razas: { select: { nombre: true, id_raza: true } },
+        colores_pelaje: { select: { id_color: true, nombre: true } },
         animales_animales_padre_id_empresa_idToanimales: {
           select: { id_animal: true, nombre: true },
         },
@@ -150,18 +204,15 @@ export class AnimalesService {
           select: { id_animal: true, nombre: true },
         },
         animal_identificaciones: {
-          where: { activo: true },
           include: { tipos_identificacion: true },
           orderBy: { fecha_asignacion: 'desc' },
         },
         animal_estados_historial: {
           orderBy: { fecha_inicio: 'desc' },
-          take: 1,
           include: { estados_animales: true },
         },
         animal_categorias_historial: {
           orderBy: { fecha_inicio: 'desc' },
-          take: 1,
           include: { categorias_animales: true },
         },
         eventos_sanitarios: {
@@ -194,8 +245,8 @@ export class AnimalesService {
       throw new NotFoundException('Animal no encontrado');
     }
 
-    const estadoActual = animal.animal_estados_historial[0] ?? null;
-    const categoriaActual = animal.animal_categorias_historial[0] ?? null;
+    const estadoActual = animal.animal_estados_historial.find(e => !e.fecha_fin) ?? animal.animal_estados_historial[0] ?? null;
+    const categoriaActual = animal.animal_categorias_historial.find(c => !c.fecha_fin) ?? animal.animal_categorias_historial[0] ?? null;
 
     return {
       ...this.mapAnimal(animal),
@@ -205,6 +256,7 @@ export class AnimalesService {
             codigo: estadoActual.estados_animales.codigo,
             nombre: estadoActual.estados_animales.nombre,
             desde: estadoActual.fecha_inicio,
+            hasta: estadoActual.fecha_fin,
           }
         : null,
       categoria_actual: categoriaActual
@@ -213,14 +265,35 @@ export class AnimalesService {
             codigo: categoriaActual.categorias_animales.codigo,
             nombre: categoriaActual.categorias_animales.nombre,
             desde: categoriaActual.fecha_inicio,
+            hasta: categoriaActual.fecha_fin,
           }
         : null,
       identificaciones: animal.animal_identificaciones.map((iden) => ({
         id: iden.id_animal_identificacion.toString(),
         tipo: iden.tipos_identificacion.nombre,
+        tipo_id: iden.tipos_identificacion.id_tipo_identificacion.toString(),
         valor: iden.valor,
         fecha_asignacion: iden.fecha_asignacion,
         activo: iden.activo,
+        observaciones: iden.observaciones,
+      })),
+      historial_estados: animal.animal_estados_historial.map((h) => ({
+        id: h.id_hist.toString(),
+        estado_id: h.estados_animales.id_estado_animal.toString(),
+        estado_codigo: h.estados_animales.codigo,
+        estado_nombre: h.estados_animales.nombre,
+        fecha_inicio: h.fecha_inicio,
+        fecha_fin: h.fecha_fin,
+        motivo: h.motivo,
+      })),
+      historial_categorias: animal.animal_categorias_historial.map((h) => ({
+        id: h.id_hist.toString(),
+        categoria_id: h.categorias_animales.id_categoria_animal.toString(),
+        categoria_codigo: h.categorias_animales.codigo,
+        categoria_nombre: h.categorias_animales.nombre,
+        fecha_inicio: h.fecha_inicio,
+        fecha_fin: h.fecha_fin,
+        observaciones: h.observaciones,
       })),
       eventos_sanitarios_recientes: animal.eventos_sanitarios.map((ev) => ({
         id: ev.id_evento_sanitario.toString(),
@@ -278,6 +351,9 @@ export class AnimalesService {
     if (dto.id_raza) {
       data.id_raza = parseBigInt(dto.id_raza, 'id_raza');
     }
+    if (dto.id_color_pelaje) {
+      data.id_color_pelaje = parseBigInt(dto.id_color_pelaje, 'id_color_pelaje');
+    }
     if (dto.padre_id) {
       data.padre_id = parseBigInt(dto.padre_id, 'padre_id');
     }
@@ -321,6 +397,9 @@ export class AnimalesService {
     if (dto.id_raza !== undefined) {
       data.id_raza = dto.id_raza ? parseBigInt(dto.id_raza, 'id_raza') : null;
     }
+    if (dto.id_color_pelaje !== undefined) {
+      data.id_color_pelaje = dto.id_color_pelaje ? parseBigInt(dto.id_color_pelaje, 'id_color_pelaje') : null;
+    }
     if (dto.padre_id !== undefined) {
       data.padre_id = dto.padre_id
         ? parseBigInt(dto.padre_id, 'padre_id')
@@ -350,6 +429,7 @@ export class AnimalesService {
       include: {
         fincas: { select: { nombre: true, id_finca: true } },
         razas: { select: { nombre: true, id_raza: true } },
+        colores_pelaje: { select: { id_color: true, nombre: true } },
       },
     });
 
@@ -372,6 +452,181 @@ export class AnimalesService {
     return { deleted: true };
   }
 
+  async getRazas(empresaId: bigint) {
+    const razas = await this.prisma.razas.findMany({
+      where: {
+        OR: [{ empresa_id: null }, { empresa_id: empresaId }],
+      },
+      orderBy: { nombre: 'asc' },
+    });
+
+    return razas.map((r) => ({
+      id: r.id_raza.toString(),
+      codigo: r.codigo,
+      nombre: r.nombre,
+      es_global: r.empresa_id === null,
+    }));
+  }
+
+  async getColoresPelaje() {
+    const colores = await this.prisma.colores_pelaje.findMany({
+      orderBy: { nombre: 'asc' },
+    });
+
+    return colores.map((c) => ({
+      id: c.id_color.toString(),
+      codigo: c.codigo,
+      nombre: c.nombre,
+    }));
+  }
+
+  async createRaza(empresaId: bigint, dto: CreateRazaDto) {
+    // Verificar si ya existe una raza con el mismo código en la empresa o global
+    const existing = await this.prisma.razas.findFirst({
+      where: {
+        OR: [
+          { empresa_id: null, codigo: dto.codigo },
+          { empresa_id: empresaId, codigo: dto.codigo },
+        ],
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException(
+        'Ya existe una raza con ese código en tu empresa o globalmente',
+      );
+    }
+
+    const raza = await this.prisma.razas.create({
+      data: {
+        empresa_id: empresaId,
+        codigo: dto.codigo,
+        nombre: dto.nombre,
+      },
+    });
+
+    return {
+      id: raza.id_raza.toString(),
+      codigo: raza.codigo,
+      nombre: raza.nombre,
+      es_global: raza.empresa_id === null,
+    };
+  }
+
+  async createColor(dto: CreateColorDto) {
+    // Verificar si ya existe un color con el mismo código
+    const existing = await this.prisma.colores_pelaje.findFirst({
+      where: { codigo: dto.codigo },
+    });
+
+    if (existing) {
+      throw new ConflictException('Ya existe un color con ese código');
+    }
+
+    const color = await this.prisma.colores_pelaje.create({
+      data: {
+        codigo: dto.codigo,
+        nombre: dto.nombre,
+      },
+    });
+
+    return {
+      id: color.id_color.toString(),
+      codigo: color.codigo,
+      nombre: color.nombre,
+    };
+  }
+
+  async uploadPhoto(
+    empresaId: bigint,
+    animalId: bigint,
+    file: Express.Multer.File,
+  ) {
+    const animal = await this.prisma.animales.findFirst({
+      where: { id_animal: animalId, empresa_id: empresaId },
+    });
+
+    if (!animal) {
+      throw new NotFoundException('Animal no encontrado');
+    }
+
+    // Eliminar foto anterior si existe
+    if (animal.foto_url) {
+      await this.uploadService.deleteAnimalPhoto(animal.foto_url);
+    }
+
+    // Guardar nueva foto
+    const fotoUrl = await this.uploadService.saveAnimalPhoto(
+      empresaId,
+      animalId,
+      file,
+    );
+
+    // Actualizar animal con nueva URL
+    await this.prisma.animales.update({
+      where: {
+        id_animal_empresa_id: {
+          id_animal: animalId,
+          empresa_id: empresaId,
+        },
+      },
+      data: { foto_url: fotoUrl },
+    });
+
+    return { foto_url: fotoUrl };
+  }
+
+  async buscarAnimales(
+    empresaId: bigint,
+    query: string,
+    sexo?: 'M' | 'F',
+  ) {
+    const where: Record<string, unknown> = {
+      empresa_id: empresaId,
+    };
+
+    if (sexo) {
+      where.sexo = sexo;
+    }
+
+    if (query) {
+      where.OR = [
+        { nombre: { contains: query } },
+        {
+          animal_identificaciones: {
+            some: {
+              valor: { contains: query },
+              activo: true,
+            },
+          },
+        },
+      ];
+    }
+
+    const animales = await this.prisma.animales.findMany({
+      where,
+      take: 20,
+      orderBy: { nombre: 'asc' },
+      select: {
+        id_animal: true,
+        nombre: true,
+        sexo: true,
+        animal_identificaciones: {
+          where: { activo: true },
+          take: 1,
+          include: { tipos_identificacion: true },
+        },
+      },
+    });
+
+    return animales.map((a) => ({
+      id: a.id_animal.toString(),
+      nombre: a.nombre ?? 'Sin nombre',
+      sexo: a.sexo,
+      identificacion: a.animal_identificaciones[0]?.valor ?? null,
+    }));
+  }
+
   private mapAnimal(animal: Record<string, unknown>) {
     const a = animal as {
       id_animal: bigint;
@@ -382,13 +637,16 @@ export class AnimalesService {
       fecha_nacimiento: Date | null;
       fecha_nacimiento_estimada: boolean;
       id_raza: bigint | null;
+      id_color_pelaje: bigint | null;
       padre_id: bigint | null;
       madre_id: bigint | null;
+      foto_url: string | null;
       notas: string | null;
       created_at: Date;
       updated_at: Date;
       fincas?: { id_finca: bigint; nombre: string };
       razas?: { id_raza: bigint; nombre: string } | null;
+      colores_pelaje?: { id_color: bigint; nombre: string } | null;
       animales_animales_padre_id_empresa_idToanimales?: {
         id_animal: bigint;
         nombre: string | null;
@@ -410,12 +668,15 @@ export class AnimalesService {
       fecha_nacimiento_estimada: a.fecha_nacimiento_estimada,
       id_raza: a.id_raza?.toString() ?? null,
       raza_nombre: a.razas?.nombre ?? null,
+      id_color_pelaje: a.id_color_pelaje?.toString() ?? null,
+      color_pelaje_nombre: a.colores_pelaje?.nombre ?? null,
       padre_id: a.padre_id?.toString() ?? null,
       padre_nombre:
         a.animales_animales_padre_id_empresa_idToanimales?.nombre ?? null,
       madre_id: a.madre_id?.toString() ?? null,
       madre_nombre:
         a.animales_animales_madre_id_empresa_idToanimales?.nombre ?? null,
+      foto_url: a.foto_url,
       notas: a.notas,
       created_at: a.created_at,
       updated_at: a.updated_at,

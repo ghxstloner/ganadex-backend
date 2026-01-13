@@ -5,9 +5,11 @@ import { IdentificacionesController } from './identificaciones/identificaciones.
 import { IdentificacionesService } from './identificaciones/identificaciones.service';
 import { AuthModule } from '../auth/auth.module';
 import { TenancyModule } from '../tenancy/tenancy.module';
+import { CommonModule } from '../common/common.module';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  imports: [AuthModule, TenancyModule],
+  imports: [AuthModule, TenancyModule, CommonModule, PrismaModule],
   controllers: [AnimalesController, IdentificacionesController],
   providers: [AnimalesService, IdentificacionesService],
   exports: [AnimalesService],

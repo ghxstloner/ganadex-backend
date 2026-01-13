@@ -32,6 +32,10 @@ export class CreateAnimalDto {
 
   @IsOptional()
   @IsString()
+  id_color_pelaje?: string;
+
+  @IsOptional()
+  @IsString()
   padre_id?: string;
 
   @IsOptional()
