@@ -63,4 +63,13 @@ export class IdentificacionesController {
   ) {
     return this.identificacionesService.remove(empresaId, id);
   }
+
+  @Patch('identificaciones/:id/principal')
+  @ApiOperation({ summary: 'Marcar identificación como principal' })
+  async setPrincipal(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.identificacionesService.setPrincipal(empresaId, id);
+  }
 }

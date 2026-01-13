@@ -68,6 +68,7 @@ model animal_identificaciones {
   valor                    String               @db.VarChar(120)
   fecha_asignacion         DateTime             @db.Date
   activo                   Boolean              @default(true)
+  es_principal             Boolean              @default(false)
   observaciones            String?              @db.Text
   animales                 animales             @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_ai_animal")
   tipos_identificacion     tipos_identificacion @relation(fields: [id_tipo_identificacion], references: [id_tipo_identificacion], map: "fk_ai_tipo")

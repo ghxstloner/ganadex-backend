@@ -20,18 +20,24 @@ import { EmpresaActivaGuard } from '../common/guards/empresa-activa.guard';
 import { ParseBigIntPipe } from '../common/pipes/parse-bigint.pipe';
 import { EmpresaActivaId } from '../rbac/empresa-activa.decorator';
 import { AnimalesService } from './animales.service';
+import { IdentificacionesService } from './identificaciones/identificaciones.service';
 import { CreateAnimalDto } from './dto/create-animal.dto';
 import { QueryAnimalDto } from './dto/query-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 import { CreateRazaDto } from './dto/create-raza.dto';
 import { CreateColorDto } from './dto/create-color.dto';
+import { CreateCategoriaHistorialDto } from './dto/create-categoria-historial.dto';
+import { CreateEstadoHistorialDto } from './dto/create-estado-historial.dto';
 
 @ApiTags('Animales')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, EmpresaActivaGuard)
 @Controller('animales')
 export class AnimalesController {
-  constructor(private readonly animalesService: AnimalesService) {}
+  constructor(
+    private readonly animalesService: AnimalesService,
+    private readonly identificacionesService: IdentificacionesService,
+  ) {}
 
   // Catálogos (rutas estáticas PRIMERO, antes de :id)
   @Get('razas')
@@ -44,6 +50,27 @@ export class AnimalesController {
   @ApiOperation({ summary: 'Listar colores de pelaje disponibles' })
   async getColoresPelaje() {
     return this.animalesService.getColoresPelaje();
+  }
+
+  @Get('tipos-identificacion')
+  @ApiOperation({ summary: 'Listar tipos de identificación disponibles' })
+  async getTiposIdentificacion(@EmpresaActivaId() empresaId: bigint) {
+    return this.identificacionesService.getTiposIdentificacion(empresaId);
+  }
+
+  @Get('categorias-animales')
+  @ApiOperation({ summary: 'Listar categorías de animales disponibles' })
+  async getCategoriasAnimales(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query('sexo') sexo?: 'M' | 'F',
+  ) {
+    return this.animalesService.getCategoriasAnimales(empresaId, sexo);
+  }
+
+  @Get('estados-animales')
+  @ApiOperation({ summary: 'Listar estados de animales disponibles' })
+  async getEstadosAnimales(@EmpresaActivaId() empresaId: bigint) {
+    return this.animalesService.getEstadosAnimales(empresaId);
   }
 
   @Post('razas')
@@ -160,5 +187,43 @@ export class AnimalesController {
     @Param('id', ParseBigIntPipe) id: bigint,
   ) {
     return this.animalesService.deletePhoto(empresaId, id);
+  }
+
+  @Get(':id/categoria-historial')
+  @ApiOperation({ summary: 'Obtener historial de categorías del animal' })
+  async getCategoriaHistorial(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.animalesService.getCategoriaHistorial(empresaId, id);
+  }
+
+  @Post(':id/categoria-historial')
+  @ApiOperation({ summary: 'Cambiar categoría del animal' })
+  async createCategoriaHistorial(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: CreateCategoriaHistorialDto,
+  ) {
+    return this.animalesService.createCategoriaHistorial(empresaId, id, dto);
+  }
+
+  @Get(':id/estado-historial')
+  @ApiOperation({ summary: 'Obtener historial de estados del animal' })
+  async getEstadoHistorial(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.animalesService.getEstadoHistorial(empresaId, id);
+  }
+
+  @Post(':id/estado-historial')
+  @ApiOperation({ summary: 'Cambiar estado del animal' })
+  async createEstadoHistorial(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: CreateEstadoHistorialDto,
+  ) {
+    return this.animalesService.createEstadoHistorial(empresaId, id, dto);
   }
 }

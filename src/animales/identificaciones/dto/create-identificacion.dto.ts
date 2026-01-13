@@ -24,6 +24,11 @@ export class CreateIdentificacionDto {
   activo?: boolean = true;
 
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  es_principal?: boolean = false;
+
+  @IsOptional()
   @IsString()
   observaciones?: string;
 }

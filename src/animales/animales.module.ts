@@ -12,6 +12,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [AuthModule, TenancyModule, CommonModule, PrismaModule],
   controllers: [AnimalesController, IdentificacionesController],
   providers: [AnimalesService, IdentificacionesService],
-  exports: [AnimalesService],
+  exports: [AnimalesService, IdentificacionesService],
 })
 export class AnimalesModule {}
