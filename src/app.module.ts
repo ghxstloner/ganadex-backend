@@ -16,6 +16,7 @@ import { SaludModule } from './salud/salud.module';
 import { LecheModule } from './leche/leche.module';
 import { FinanzasModule } from './finanzas/finanzas.module';
 import { AuditoriasModule } from './auditorias/auditorias.module';
+import { OcupacionesModule } from './ocupaciones/ocupaciones.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AuditoriasModule } from './auditorias/auditorias.module';
     LecheModule,
     FinanzasModule,
     AuditoriasModule,
+    OcupacionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -26,6 +26,12 @@ import { UpdateMovimientoDto } from './dto/update-movimiento.dto';
 export class MovimientosController {
   constructor(private readonly movimientosService: MovimientosService) {}
 
+  @Get('motivos/list')
+  @ApiOperation({ summary: 'Listar motivos de movimiento (catálogo)' })
+  async getMotivos(@EmpresaActivaId() empresaId: bigint) {
+    return this.movimientosService.getMotivos(empresaId);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Listar movimientos con paginación y filtros' })
   async findAll(

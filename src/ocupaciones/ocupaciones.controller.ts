@@ -1,0 +1,80 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { EmpresaActivaGuard } from '../common/guards/empresa-activa.guard';
+import { ParseBigIntPipe } from '../common/pipes/parse-bigint.pipe';
+import { EmpresaActivaId } from '../rbac/empresa-activa.decorator';
+import { OcupacionesService } from './ocupaciones.service';
+import { CreateOcupacionDto } from './dto/create-ocupacion.dto';
+import { CloseOcupacionDto } from './dto/close-ocupacion.dto';
+import { ListOcupacionesDto } from './dto/list-ocupaciones.dto';
+
+@ApiTags('Ocupaciones')
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, EmpresaActivaGuard)
+@Controller('ocupaciones')
+export class OcupacionesController {
+  constructor(private readonly ocupacionesService: OcupacionesService) {}
+
+  @Get('resumen-actual')
+  @ApiOperation({
+    summary: 'Obtener resumen de ocupaciones actuales (por potrero y por lote)',
+  })
+  async getResumenActual(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query('id_finca') id_finca?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.ocupacionesService.getResumenActual(
+      empresaId,
+      id_finca,
+      search,
+    );
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Listar ocupaciones con paginación y filtros' })
+  async findAll(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query() query: ListOcupacionesDto,
+  ) {
+    return this.ocupacionesService.findAll(empresaId, query);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Crear una nueva ocupación' })
+  async create(
+    @EmpresaActivaId() empresaId: bigint,
+    @Body() dto: CreateOcupacionDto,
+  ) {
+    return this.ocupacionesService.create(empresaId, dto);
+  }
+
+  @Patch(':id/cerrar')
+  @ApiOperation({ summary: 'Cerrar una ocupación (establecer fecha_fin)' })
+  async cerrar(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: CloseOcupacionDto,
+  ) {
+    return this.ocupacionesService.cerrar(empresaId, id, dto);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener ocupación por ID' })
+  async findOne(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.ocupacionesService.findOne(empresaId, id);
+  }
+}

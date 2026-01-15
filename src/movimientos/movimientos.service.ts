@@ -234,6 +234,26 @@ export class MovimientosService {
     return { deleted: true };
   }
 
+  async getMotivos(empresaId: bigint) {
+    const motivos = await this.prisma.motivos_movimiento.findMany({
+      where: {
+        OR: [{ empresa_id: empresaId }, { empresa_id: null }],
+      },
+      orderBy: { nombre: 'asc' },
+      select: {
+        id_motivo_movimiento: true,
+        codigo: true,
+        nombre: true,
+      },
+    });
+
+    return motivos.map((m) => ({
+      id: m.id_motivo_movimiento.toString(),
+      codigo: m.codigo,
+      nombre: m.nombre,
+    }));
+  }
+
   private mapMovimiento(m: Record<string, unknown>) {
     const mov = m as {
       id_movimiento: bigint;
