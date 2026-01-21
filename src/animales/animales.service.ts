@@ -53,7 +53,10 @@ export class AnimalesService {
       where.id_raza = parseBigInt(query.id_raza, 'id_raza');
     }
     if (query.id_color_pelaje) {
-      where.id_color_pelaje = parseBigInt(query.id_color_pelaje, 'id_color_pelaje');
+      where.id_color_pelaje = parseBigInt(
+        query.id_color_pelaje,
+        'id_color_pelaje',
+      );
     }
     if (query.fecha_nacimiento_desde || query.fecha_nacimiento_hasta) {
       where.fecha_nacimiento = {};
@@ -273,8 +276,14 @@ export class AnimalesService {
       throw new NotFoundException('Animal no encontrado');
     }
 
-    const estadoActual = animal.animal_estados_historial.find(e => !e.fecha_fin) ?? animal.animal_estados_historial[0] ?? null;
-    const categoriaActual = animal.animal_categorias_historial.find(c => !c.fecha_fin) ?? animal.animal_categorias_historial[0] ?? null;
+    const estadoActual =
+      animal.animal_estados_historial.find((e) => !e.fecha_fin) ??
+      animal.animal_estados_historial[0] ??
+      null;
+    const categoriaActual =
+      animal.animal_categorias_historial.find((c) => !c.fecha_fin) ??
+      animal.animal_categorias_historial[0] ??
+      null;
 
     return {
       ...this.mapAnimal(animal),
@@ -385,7 +394,10 @@ export class AnimalesService {
       data.id_raza = parseBigInt(dto.id_raza, 'id_raza');
     }
     if (dto.id_color_pelaje) {
-      data.id_color_pelaje = parseBigInt(dto.id_color_pelaje, 'id_color_pelaje');
+      data.id_color_pelaje = parseBigInt(
+        dto.id_color_pelaje,
+        'id_color_pelaje',
+      );
     }
     if (dto.padre_id) {
       data.padre_id = parseBigInt(dto.padre_id, 'padre_id');
@@ -438,7 +450,9 @@ export class AnimalesService {
       data.id_raza = dto.id_raza ? parseBigInt(dto.id_raza, 'id_raza') : null;
     }
     if (dto.id_color_pelaje !== undefined) {
-      data.id_color_pelaje = dto.id_color_pelaje ? parseBigInt(dto.id_color_pelaje, 'id_color_pelaje') : null;
+      data.id_color_pelaje = dto.id_color_pelaje
+        ? parseBigInt(dto.id_color_pelaje, 'id_color_pelaje')
+        : null;
     }
     if (dto.padre_id !== undefined) {
       data.padre_id = dto.padre_id
@@ -674,7 +688,7 @@ export class AnimalesService {
     }
 
     // Deduplicar por código (mantener el que tenga menor id u orden)
-    const categoriasUnicas = new Map<string, typeof categorias[0]>();
+    const categoriasUnicas = new Map<string, (typeof categorias)[0]>();
     for (const cat of categoriasFiltradas) {
       const existing = categoriasUnicas.get(cat.codigo);
       if (!existing) {
@@ -759,7 +773,10 @@ export class AnimalesService {
       throw new NotFoundException('Animal no encontrado');
     }
 
-    const idCategoria = parseBigInt(dto.id_categoria_animal, 'id_categoria_animal');
+    const idCategoria = parseBigInt(
+      dto.id_categoria_animal,
+      'id_categoria_animal',
+    );
     const fechaInicio = new Date(dto.fecha_inicio);
 
     // Verificar que la categoría existe y está activa
@@ -783,13 +800,14 @@ export class AnimalesService {
     }
 
     // Cerrar el registro vigente anterior (si existe)
-    const registroVigente = await this.prisma.animal_categorias_historial.findFirst({
-      where: {
-        id_animal: animalId,
-        empresa_id: empresaId,
-        fecha_fin: null,
-      },
-    });
+    const registroVigente =
+      await this.prisma.animal_categorias_historial.findFirst({
+        where: {
+          id_animal: animalId,
+          empresa_id: empresaId,
+          fecha_fin: null,
+        },
+      });
 
     if (registroVigente) {
       // Cerrar el registro anterior: fecha_fin = fecha_inicio - 1 día
@@ -819,7 +837,8 @@ export class AnimalesService {
 
     return {
       id: nuevoRegistro.id_hist.toString(),
-      categoria_id: nuevoRegistro.categorias_animales.id_categoria_animal.toString(),
+      categoria_id:
+        nuevoRegistro.categorias_animales.id_categoria_animal.toString(),
       categoria_codigo: nuevoRegistro.categorias_animales.codigo,
       categoria_nombre: nuevoRegistro.categorias_animales.nombre,
       fecha_inicio: nuevoRegistro.fecha_inicio,
@@ -882,13 +901,14 @@ export class AnimalesService {
     }
 
     // Cerrar el registro vigente anterior (si existe)
-    const registroVigente = await this.prisma.animal_estados_historial.findFirst({
-      where: {
-        id_animal: animalId,
-        empresa_id: empresaId,
-        fecha_fin: null,
-      },
-    });
+    const registroVigente =
+      await this.prisma.animal_estados_historial.findFirst({
+        where: {
+          id_animal: animalId,
+          empresa_id: empresaId,
+          fecha_fin: null,
+        },
+      });
 
     if (registroVigente) {
       // Cerrar el registro anterior: fecha_fin = fecha_inicio - 1 día
@@ -1027,13 +1047,16 @@ export class AnimalesService {
       : null;
 
     // Get principal identification value
-    const identificadorPrincipal = a.animal_identificaciones?.[0]?.valor ?? null;
+    const identificadorPrincipal =
+      a.animal_identificaciones?.[0]?.valor ?? null;
 
     // Get current categoria (from active historial)
-    const categoriaActual = a.animal_categorias_historial?.[0]?.categorias_animales?.nombre ?? null;
+    const categoriaActual =
+      a.animal_categorias_historial?.[0]?.categorias_animales?.nombre ?? null;
 
     // Get current estado (from active historial)
-    const estadoActual = a.animal_estados_historial?.[0]?.estados_animales?.nombre ?? null;
+    const estadoActual =
+      a.animal_estados_historial?.[0]?.estados_animales?.nombre ?? null;
 
     return {
       id: a.id_animal.toString(),

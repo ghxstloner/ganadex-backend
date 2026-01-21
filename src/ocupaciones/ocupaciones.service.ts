@@ -1,7 +1,8 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
@@ -131,41 +132,8 @@ export class OcupacionesService {
       );
     }
 
-    // Usar transacción para evitar race conditions
-    return await this.prisma.$transaction(async (tx) => {
-      // Verificar que NO exista ocupación activa para ese potrero
-      const ocupacionPotreroActiva =
-        await tx.ocupacion_potreros.findFirst({
-          where: {
-            empresa_id: empresaId,
-            id_potrero,
-            fecha_fin: null,
-          },
-        });
-
-      if (ocupacionPotreroActiva) {
-        throw new BadRequestException(
-          `El potrero "${potrero.nombre}" ya tiene una ocupación activa. Debe cerrar la ocupación actual antes de crear una nueva.`,
-        );
-      }
-
-      // Verificar que NO exista ocupación activa para ese lote
-      const ocupacionLoteActiva = await tx.ocupacion_potreros.findFirst({
-        where: {
-          empresa_id: empresaId,
-          id_lote,
-          fecha_fin: null,
-        },
-      });
-
-      if (ocupacionLoteActiva) {
-        throw new BadRequestException(
-          `El lote "${lote.nombre}" ya está ocupado en otro potrero. Debe cerrar la ocupación actual antes de crear una nueva.`,
-        );
-      }
-
-      // Crear la ocupación
-      const ocupacion = await tx.ocupacion_potreros.create({
+    try {
+      const ocupacion = await this.prisma.ocupacion_potreros.create({
         data: {
           empresa_id: empresaId,
           id_finca,
@@ -183,7 +151,27 @@ export class OcupacionesService {
       });
 
       return this.mapOcupacion(ocupacion);
-    });
+    } catch (error) {
+      const prismaError = error as {
+        code?: string;
+        meta?: { target?: string[] };
+      };
+      if (prismaError.code === 'P2002') {
+        const target = prismaError.meta?.target ?? [];
+        if (target.includes('uq_op_lote_activa')) {
+          throw new ConflictException(
+            `El lote "${lote.nombre}" ya tiene una ocupación activa`,
+          );
+        }
+        if (target.includes('uq_op_potrero_activa')) {
+          throw new ConflictException(
+            `El potrero "${potrero.nombre}" ya tiene una ocupación activa`,
+          );
+        }
+        throw new ConflictException('Ya existe una ocupación activa');
+      }
+      throw error;
+    }
   }
 
   async cerrar(empresaId: bigint, id: bigint, dto: CloseOcupacionDto) {
@@ -199,7 +187,7 @@ export class OcupacionesService {
       throw new BadRequestException('La ocupación ya está cerrada');
     }
 
-    const fecha_fin = new Date(dto.fecha_fin);
+    const fecha_fin = dto.fecha_fin ? new Date(dto.fecha_fin) : new Date();
 
     if (fecha_fin < ocupacion.fecha_inicio) {
       throw new BadRequestException(
@@ -223,7 +211,11 @@ export class OcupacionesService {
     return this.mapOcupacion(updated);
   }
 
-  async getResumenActual(empresaId: bigint, id_finca?: string, search?: string) {
+  async getResumenActual(
+    empresaId: bigint,
+    id_finca?: string,
+    search?: string,
+  ) {
     const where: Record<string, unknown> = {
       empresa_id: empresaId,
       fecha_fin: null, // Solo ocupaciones activas

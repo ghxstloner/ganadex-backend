@@ -13,7 +13,12 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EmpresaActivaGuard } from '../common/guards/empresa-activa.guard';
@@ -89,7 +94,9 @@ export class AnimalesController {
   }
 
   @Get('buscar')
-  @ApiOperation({ summary: 'Buscar animales para autocompletado (padre/madre)' })
+  @ApiOperation({
+    summary: 'Buscar animales para autocompletado (padre/madre)',
+  })
   async buscarAnimales(
     @EmpresaActivaId() empresaId: bigint,
     @Query('q') query: string,

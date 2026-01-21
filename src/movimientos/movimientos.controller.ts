@@ -7,9 +7,22 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
+  ParseFilePipe,
+  FileTypeValidator,
+  MaxFileSizeValidator,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import type { Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EmpresaActivaGuard } from '../common/guards/empresa-activa.guard';
 import { ParseBigIntPipe } from '../common/pipes/parse-bigint.pipe';
@@ -39,6 +52,60 @@ export class MovimientosController {
     @Query() query: QueryMovimientoDto,
   ) {
     return this.movimientosService.findAll(empresaId, query);
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Exportar movimientos en Excel' })
+  async exportExcel(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query() query: QueryMovimientoDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const buffer = await this.movimientosService.exportExcel(empresaId, query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="movimientos.xlsx"',
+    );
+    return buffer;
+  }
+
+  @Get('template')
+  @ApiOperation({ summary: 'Descargar plantilla de importacion' })
+  async template(@Res({ passthrough: true }) res: Response) {
+    const buffer = await this.movimientosService.buildTemplate();
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="movimientos_template.xlsx"',
+    );
+    return buffer;
+  }
+
+  @Post('import')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Importar movimientos desde Excel' })
+  async importExcel(
+    @EmpresaActivaId() empresaId: bigint,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /\.xlsx$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.movimientosService.importExcel(empresaId, file.buffer);
   }
 
   @Post()

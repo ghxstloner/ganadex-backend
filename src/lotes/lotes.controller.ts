@@ -18,6 +18,8 @@ import { LotesService } from './lotes.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { QueryLoteDto } from './dto/query-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
+import { BulkAssignAnimalsDto } from './dto/bulk-assign-animals.dto';
+import { BulkRemoveAnimalsDto } from './dto/bulk-remove-animals.dto';
 
 @ApiTags('Lotes')
 @ApiBearerAuth('JWT-auth')
@@ -44,6 +46,26 @@ export class LotesController {
     return this.lotesService.create(empresaId, dto);
   }
 
+  @Post(':id/bulk-assign')
+  @ApiOperation({ summary: 'Asignar animales en lote (bulk)' })
+  async bulkAssign(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: BulkAssignAnimalsDto,
+  ) {
+    return this.lotesService.bulkAssign(empresaId, id, dto);
+  }
+
+  @Post(':id/bulk-remove')
+  @ApiOperation({ summary: 'Remover animales de lote (bulk)' })
+  async bulkRemove(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: BulkRemoveAnimalsDto,
+  ) {
+    return this.lotesService.bulkRemove(empresaId, id, dto);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener lote por ID' })
   async findOne(
@@ -51,6 +73,15 @@ export class LotesController {
     @Param('id', ParseBigIntPipe) id: bigint,
   ) {
     return this.lotesService.findOne(empresaId, id);
+  }
+
+  @Get(':id/animales')
+  @ApiOperation({ summary: 'Obtener animales de un lote' })
+  async getAnimales(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.lotesService.getAnimales(empresaId, id);
   }
 
   @Patch(':id')

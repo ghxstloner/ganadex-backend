@@ -80,34 +80,37 @@ model animal_identificaciones {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model animales {
-  id_animal                                                                       BigInt                        @default(autoincrement()) @db.UnsignedBigInt
-  empresa_id                                                                      BigInt                        @db.UnsignedBigInt
-  id_finca                                                                        BigInt                        @db.UnsignedBigInt
-  nombre                                                                          String?                       @db.VarChar(120)
-  sexo                                                                            String                        @db.Char(1)
-  fecha_nacimiento                                                                DateTime?                     @db.Date
-  fecha_nacimiento_estimada                                                       Boolean                       @default(false)
-  id_raza                                                                         BigInt?                       @db.UnsignedBigInt
-  id_color_pelaje                                                                BigInt?                       @db.UnsignedBigInt
-  padre_id                                                                        BigInt?                       @db.UnsignedBigInt
-  madre_id                                                                        BigInt?                       @db.UnsignedBigInt
-  foto_url                                                                        String?                       @db.VarChar(500)
-  notas                                                                           String?                       @db.Text
-  created_at                                                                      DateTime                      @default(now()) @db.Timestamp(0)
-  updated_at                                                                      DateTime                      @default(now()) @db.Timestamp(0)
-  animal_categorias_historial                                                     animal_categorias_historial[]
-  animal_estados_historial                                                        animal_estados_historial[]
-  animal_identificaciones                                                         animal_identificaciones[]
-  fincas                                                                          fincas                        @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_animales_finca")
-  animales_animales_madre_id_empresa_idToanimales                                 animales?                     @relation("animales_madre_id_empresa_idToanimales", fields: [madre_id, empresa_id], references: [id_animal, empresa_id], map: "fk_animales_madre")
-  other_animales_animales_madre_id_empresa_idToanimales                           animales[]                    @relation("animales_madre_id_empresa_idToanimales")
-  animales_animales_padre_id_empresa_idToanimales                                 animales?                     @relation("animales_padre_id_empresa_idToanimales", fields: [padre_id, empresa_id], references: [id_animal, empresa_id], map: "fk_animales_padre")
-  other_animales_animales_padre_id_empresa_idToanimales                           animales[]                    @relation("animales_padre_id_empresa_idToanimales")
-  razas                                                                           razas?                        @relation(fields: [id_raza], references: [id_raza], map: "fk_animales_raza")
-  colores_pelaje                                                                 colores_pelaje?               @relation(fields: [id_color_pelaje], references: [id_color], map: "fk_animales_color")
+  id_animal      BigInt  @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id     BigInt  @db.UnsignedBigInt
+  id_finca       BigInt  @db.UnsignedBigInt
+  lote_actual_id BigInt? @db.UnsignedBigInt
+  nombre         String? @db.VarChar(120)
+  sexo           String  @db.Char(1)
+
+  fecha_nacimiento            DateTime?                     @db.Date
+  fecha_nacimiento_estimada   Boolean                       @default(false)
+  id_raza                     BigInt?                       @db.UnsignedBigInt
+  id_color_pelaje             BigInt?                       @db.UnsignedBigInt
+  padre_id                    BigInt?                       @db.UnsignedBigInt
+  madre_id                    BigInt?                       @db.UnsignedBigInt
+  foto_url                    String?                       @db.VarChar(500)
+  notas                       String?                       @db.Text
+  created_at                  DateTime                      @default(now()) @db.Timestamp(0)
+  updated_at                  DateTime                      @default(now()) @db.Timestamp(0)
+  animal_categorias_historial animal_categorias_historial[]
+  animal_estados_historial    animal_estados_historial[]
+  animal_identificaciones     animal_identificaciones[]
+  fincas                      fincas                        @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_animales_finca")
+
+  animales_animales_madre_id_empresa_idToanimales                                 animales?                @relation("animales_madre_id_empresa_idToanimales", fields: [madre_id, empresa_id], references: [id_animal, empresa_id], map: "fk_animales_madre")
+  other_animales_animales_madre_id_empresa_idToanimales                           animales[]               @relation("animales_madre_id_empresa_idToanimales")
+  animales_animales_padre_id_empresa_idToanimales                                 animales?                @relation("animales_padre_id_empresa_idToanimales", fields: [padre_id, empresa_id], references: [id_animal, empresa_id], map: "fk_animales_padre")
+  other_animales_animales_padre_id_empresa_idToanimales                           animales[]               @relation("animales_padre_id_empresa_idToanimales")
+  razas                                                                           razas?                   @relation(fields: [id_raza], references: [id_raza], map: "fk_animales_raza")
+  colores_pelaje                                                                  colores_pelaje?          @relation(fields: [id_color_pelaje], references: [id_color], map: "fk_animales_color")
   auditoria_detalle                                                               auditoria_detalle[]
-  eventos_reproductivos_eventos_reproductivos_id_animal_empresa_idToanimales      eventos_reproductivos[]       @relation("eventos_reproductivos_id_animal_empresa_idToanimales")
-  eventos_reproductivos_eventos_reproductivos_reproductor_id_empresa_idToanimales eventos_reproductivos[]       @relation("eventos_reproductivos_reproductor_id_empresa_idToanimales")
+  eventos_reproductivos_eventos_reproductivos_id_animal_empresa_idToanimales      eventos_reproductivos[]  @relation("eventos_reproductivos_id_animal_empresa_idToanimales")
+  eventos_reproductivos_eventos_reproductivos_reproductor_id_empresa_idToanimales eventos_reproductivos[]  @relation("eventos_reproductivos_reproductor_id_empresa_idToanimales")
   eventos_sanitarios                                                              eventos_sanitarios[]
   lactancias                                                                      lactancias[]
   movimientos_animales                                                            movimientos_animales[]
@@ -123,6 +126,7 @@ model animales {
   @@index([padre_id, empresa_id], map: "idx_animales_padre")
   @@index([id_raza], map: "idx_animales_raza")
   @@index([id_color_pelaje], map: "idx_animales_color")
+  @@index([empresa_id, lote_actual_id], map: "idx_animales_empresa_lote_actual")
 }
 
 model auditoria_detalle {
@@ -488,39 +492,38 @@ model metodos_auditoria {
 }
 
 model monedas {
-  id_moneda         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  id_moneda BigInt @id @default(autoincrement()) @db.UnsignedBigInt
 
-  iso_alpha3        String   @db.Char(3)
-  iso_num           String?  @db.Char(3)
-  nombre            String   @db.VarChar(80)
-  nombre_plural     String?  @db.VarChar(80)
-  simbolo           String?  @db.VarChar(12)
-  simbolo_nativo    String?  @db.VarChar(12)
-  simbolo_html      String?  @db.VarChar(32)
-  unicode_symbol    String?  @db.VarChar(16)
-  decimales         Int      @default(2) @db.UnsignedTinyInt
-  subunidad_nombre  String?  @db.VarChar(40)
-  subunidad_factor  Int      @default(100) @db.UnsignedInt
-  separador_decimal String   @default(".") @db.Char(1)
-  separador_miles   String   @default(",") @db.Char(1)
-  formato           String?  @db.VarChar(40)
-  redondeo          Decimal  @default(0.000000) @db.Decimal(10, 6)
-  es_cripto         Boolean  @default(false)
-  activo            Boolean  @default(true)
+  iso_alpha3        String  @db.Char(3)
+  iso_num           String? @db.Char(3)
+  nombre            String  @db.VarChar(80)
+  nombre_plural     String? @db.VarChar(80)
+  simbolo           String? @db.VarChar(12)
+  simbolo_nativo    String? @db.VarChar(12)
+  simbolo_html      String? @db.VarChar(32)
+  unicode_symbol    String? @db.VarChar(16)
+  decimales         Int     @default(2) @db.UnsignedTinyInt
+  subunidad_nombre  String? @db.VarChar(40)
+  subunidad_factor  Int     @default(100) @db.UnsignedInt
+  separador_decimal String  @default(".") @db.Char(1)
+  separador_miles   String  @default(",") @db.Char(1)
+  formato           String? @db.VarChar(40)
+  redondeo          Decimal @default(0.000000) @db.Decimal(10, 6)
+  es_cripto         Boolean @default(false)
+  activo            Boolean @default(true)
 
-  created_at        DateTime @default(now()) @db.Timestamp(0)
-  updated_at        DateTime @default(now()) @db.Timestamp(0)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
 
   fincas               fincas[]
   liquidaciones_leche  liquidaciones_leche[]
-  tasas_cambio_origen  tasas_cambio[] @relation("tasas_cambio_moneda_origen_idTomonedas")
-  tasas_cambio_destino tasas_cambio[] @relation("tasas_cambio_moneda_destino_idTomonedas")
+  tasas_cambio_origen  tasas_cambio[]        @relation("tasas_cambio_moneda_origen_idTomonedas")
+  tasas_cambio_destino tasas_cambio[]        @relation("tasas_cambio_moneda_destino_idTomonedas")
 
   @@unique([iso_alpha3], map: "uq_monedas_iso_alpha3")
   @@index([activo], map: "idx_monedas_activo")
   @@index([iso_num], map: "idx_monedas_iso_num")
 }
-
 
 model motivos_movimiento {
   id_motivo_movimiento BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
@@ -566,25 +569,34 @@ model movimientos_animales {
   @@index([id_motivo_movimiento], map: "idx_mov_motivo")
   @@index([potrero_destino_id, empresa_id], map: "idx_mov_pot_dest")
   @@index([potrero_origen_id, empresa_id], map: "idx_mov_pot_origen")
+  @@index([empresa_id, id_animal, fecha_hora], map: "idx_mov_animal_fecha_empresa")
+  @@index([empresa_id, lote_origen_id, fecha_hora], map: "idx_mov_lote_origen_fecha_empresa")
+  @@index([empresa_id, lote_destino_id, fecha_hora], map: "idx_mov_lote_destino_fecha_empresa")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model ocupacion_potreros {
-  id_ocupacion BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  empresa_id   BigInt    @db.UnsignedBigInt
-  id_finca     BigInt    @db.UnsignedBigInt
-  fecha_inicio DateTime  @db.Date
-  fecha_fin    DateTime? @db.Date
-  id_lote      BigInt    @db.UnsignedBigInt
-  id_potrero   BigInt    @db.UnsignedBigInt
-  notas        String?   @db.Text
-  fincas       fincas    @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_op_finca")
-  lotes        lotes     @relation(fields: [id_lote, empresa_id], references: [id_lote, empresa_id], onDelete: Cascade, map: "fk_op_lote")
-  potreros     potreros  @relation(fields: [id_potrero, empresa_id], references: [id_potrero, empresa_id], onDelete: Cascade, map: "fk_op_potrero")
+  id_ocupacion BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id   BigInt                  @db.UnsignedBigInt
+  id_finca     BigInt                  @db.UnsignedBigInt
+  fecha_inicio DateTime                @db.Date
+  fecha_fin    DateTime?               @db.Date
+  id_lote      BigInt                  @db.UnsignedBigInt
+  id_potrero   BigInt                  @db.UnsignedBigInt
+  is_active    Unsupported("tinyint")?
+  notas        String?                 @db.Text
 
+  fincas   fincas   @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_op_finca")
+  lotes    lotes    @relation(fields: [id_lote, empresa_id], references: [id_lote, empresa_id], onDelete: Cascade, map: "fk_op_lote")
+  potreros potreros @relation(fields: [id_potrero, empresa_id], references: [id_potrero, empresa_id], onDelete: Cascade, map: "fk_op_potrero")
+
+  @@unique([empresa_id, id_lote, is_active], map: "uq_op_lote_activa")
+  @@unique([empresa_id, id_potrero, is_active], map: "uq_op_potrero_activa")
   @@index([id_finca, empresa_id], map: "idx_op_finca")
   @@index([id_lote, empresa_id, fecha_inicio], map: "idx_op_lote")
   @@index([id_potrero, empresa_id, fecha_inicio], map: "idx_op_potrero")
+  @@index([empresa_id, id_lote, fecha_fin], map: "idx_op_lote_fin")
+  @@index([empresa_id, id_potrero, fecha_fin], map: "idx_op_potrero_fin")
 }
 
 model permisos {
@@ -663,20 +675,20 @@ model produccion_leche {
 }
 
 model pesajes_leche_animales {
-  id_pesaje     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  empresa_id    BigInt    @db.UnsignedBigInt
-  id_animal     BigInt    @db.UnsignedBigInt
-  fecha         DateTime  @db.Date
-  id_turno      BigInt?   @db.UnsignedBigInt
-  litros        Decimal   @db.Decimal(12, 3)
-  notas         String?   @db.Text
-  created_by    BigInt?   @db.UnsignedBigInt
-  created_at    DateTime  @default(now()) @db.Timestamp(0)
+  id_pesaje  BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id BigInt   @db.UnsignedBigInt
+  id_animal  BigInt   @db.UnsignedBigInt
+  fecha      DateTime @db.Date
+  id_turno   BigInt?  @db.UnsignedBigInt
+  litros     Decimal  @db.Decimal(12, 3)
+  notas      String?  @db.Text
+  created_by BigInt?  @db.UnsignedBigInt
+  created_at DateTime @default(now()) @db.Timestamp(0)
 
   // Relaciones
-  animales      animales       @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_pla_animal")
+  animales       animales        @relation(fields: [id_animal, empresa_id], references: [id_animal, empresa_id], onDelete: Cascade, map: "fk_pla_animal")
   turnos_ordenio turnos_ordenio? @relation(fields: [id_turno], references: [id_turno], map: "fk_pla_turno")
-  usuarios      usuarios?      @relation(fields: [created_by], references: [id_usuario], map: "fk_pla_created_by")
+  usuarios       usuarios?       @relation(fields: [created_by], references: [id_usuario], map: "fk_pla_created_by")
 
   // Un registro por vaca por fecha (y opcionalmente por turno)
   @@unique([empresa_id, id_animal, fecha, id_turno], map: "uq_pla_animal_fecha_turno")
@@ -763,11 +775,11 @@ model razas {
 }
 
 model colores_pelaje {
-  id_color   BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  codigo     String   @unique(map: "uq_colores_pelaje_codigo") @db.VarChar(40)
-  nombre     String   @db.VarChar(120)
+  id_color BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  codigo   String @unique(map: "uq_colores_pelaje_codigo") @db.VarChar(40)
+  nombre   String @db.VarChar(120)
 
-  animales   animales[]
+  animales animales[]
 }
 
 model recordatorios {
@@ -828,27 +840,26 @@ model retiros {
 }
 
 model roles {
-  id_rol        BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
-  empresa_id    BigInt?     @db.UnsignedBigInt
-  id_ambito_rol BigInt      @db.UnsignedBigInt
-  codigo        String      @db.VarChar(50)
-  nombre        String      @db.VarChar(120)
-  descripcion   String?     @db.Text
-  activo        Boolean     @default(true)
+  id_rol        BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id    BigInt? @db.UnsignedBigInt
+  id_ambito_rol BigInt  @db.UnsignedBigInt
+  codigo        String  @db.VarChar(50)
+  nombre        String  @db.VarChar(120)
+  descripcion   String? @db.Text
+  activo        Boolean @default(true)
 
-  ambitos_rol   ambitos_rol @relation(fields: [id_ambito_rol], references: [id_ambito_rol], map: "fk_roles_ambito")
-  empresas      empresas?   @relation(fields: [empresa_id], references: [id_empresa], onDelete: Cascade, map: "fk_roles_empresa")
+  ambitos_rol ambitos_rol @relation(fields: [id_ambito_rol], references: [id_ambito_rol], map: "fk_roles_ambito")
+  empresas    empresas?   @relation(fields: [empresa_id], references: [id_empresa], onDelete: Cascade, map: "fk_roles_empresa")
 
   roles_permisos   roles_permisos[]
   usuario_empresas usuario_empresas[]
   usuario_fincas   usuario_fincas[]
 
-  @@index([id_ambito_rol], map: "idx_roles_ambito")
-  @@index([empresa_id], map: "idx_roles_empresa")
   @@unique([empresa_id, codigo], map: "uq_roles_empresa_codigo")
   @@unique([empresa_id, nombre], map: "uq_roles_empresa_nombre")
+  @@index([id_ambito_rol], map: "idx_roles_ambito")
+  @@index([empresa_id], map: "idx_roles_empresa")
 }
-
 
 model roles_permisos {
   id_rol     BigInt   @db.UnsignedBigInt
@@ -1021,14 +1032,14 @@ model tratamientos {
 }
 
 model turnos_ordenio {
-  id_turno         BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
-  empresa_id       BigInt?            @db.UnsignedBigInt
-  empresa_id_u     BigInt?            @db.UnsignedBigInt
-  codigo           String             @db.VarChar(40)
-  nombre           String             @db.VarChar(120)
-  produccion_leche      produccion_leche[]
+  id_turno               BigInt                   @id @default(autoincrement()) @db.UnsignedBigInt
+  empresa_id             BigInt?                  @db.UnsignedBigInt
+  empresa_id_u           BigInt?                  @db.UnsignedBigInt
+  codigo                 String                   @db.VarChar(40)
+  nombre                 String                   @db.VarChar(120)
+  produccion_leche       produccion_leche[]
   pesajes_leche_animales pesajes_leche_animales[]
-  empresas              empresas?          @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_to_empresa")
+  empresas               empresas?                @relation(fields: [empresa_id], references: [id_empresa], onDelete: Restrict, onUpdate: Restrict, map: "fk_to_empresa")
 
   @@unique([empresa_id_u, codigo], map: "uq_to_empresa_codigo")
   @@index([empresa_id], map: "idx_to_empresa")
