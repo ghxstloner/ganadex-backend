@@ -12,19 +12,19 @@ export class CreateMovimientoDto {
 
   @IsOptional()
   @IsString()
-  lote_origen_id?: string;
+  lote_origen_id?: string | null;
 
   @IsOptional()
   @IsString()
-  lote_destino_id?: string;
+  lote_destino_id?: string | null;
 
   @IsOptional()
   @IsString()
-  potrero_origen_id?: string;
+  potrero_origen_id?: string | null;
 
   @IsOptional()
   @IsString()
-  potrero_destino_id?: string;
+  potrero_destino_id?: string | null;
 
   @IsOptional()
   @IsString()

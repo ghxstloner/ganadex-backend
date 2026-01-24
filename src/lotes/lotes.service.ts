@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
 import {
@@ -158,8 +159,8 @@ export class LotesService {
       throw new NotFoundException('Lote no encontrado');
     }
 
-    const animalIds = dto.animal_ids.map((animalId) =>
-      parseBigInt(animalId, 'animal_id'),
+    const animalIds = dto.id_animal.map((animalId) =>
+      parseBigInt(animalId, 'id_animal'),
     );
 
     const animales = await this.prisma.animales.findMany({
@@ -174,28 +175,28 @@ export class LotesService {
       animales.map((animal) => [animal.id_animal.toString(), animal]),
     );
 
-    const failed: { animal_id: string; reason: string }[] = [];
+    const failed: { id_animal: string; reason: string }[] = [];
     const validAnimals: {
       id_animal: bigint;
       lote_actual_id: bigint | null;
       id_finca: bigint;
     }[] = [];
 
-    dto.animal_ids.forEach((animalId) => {
+    dto.id_animal.forEach((animalId) => {
       const animal = animalesMap.get(animalId);
       if (!animal) {
-        failed.push({ animal_id: animalId, reason: 'ANIMAL_NO_ENCONTRADO' });
+        failed.push({ id_animal: animalId, reason: 'ANIMAL_NO_ENCONTRADO' });
         return;
       }
       if (animal.id_finca !== lote.id_finca) {
         failed.push({
-          animal_id: animalId,
+          id_animal: animalId,
           reason: 'ANIMAL_FUERA_DE_FINCA',
         });
         return;
       }
       if (animal.lote_actual_id === id) {
-        failed.push({ animal_id: animalId, reason: 'ANIMAL_YA_EN_LOTE' });
+        failed.push({ id_animal: animalId, reason: 'ANIMAL_YA_EN_LOTE' });
         return;
       }
       validAnimals.push(animal);
@@ -206,6 +207,10 @@ export class LotesService {
     }
 
     const now = new Date();
+    const potreroActualPorAnimal = await this.getPotreroActualPorAnimal(
+      empresaId,
+      validAnimals.map((animal) => animal.id_animal),
+    );
 
     await this.prisma.$transaction(async (tx) => {
       await tx.animales.updateMany({
@@ -217,19 +222,24 @@ export class LotesService {
       });
 
       await tx.movimientos_animales.createMany({
-        data: validAnimals.map((animal) => ({
-          empresa_id: empresaId,
-          id_finca: lote.id_finca,
-          fecha_hora: now,
-          id_animal: animal.id_animal,
-          lote_origen_id: animal.lote_actual_id,
-          lote_destino_id: id,
-          potrero_origen_id: null,
-          potrero_destino_id: null,
-          id_motivo_movimiento: null,
-          observaciones: 'Asignacion masiva a lote',
-          created_by: null,
-        })),
+        data: validAnimals.map((animal) => {
+          const potreroActual = potreroActualPorAnimal.get(
+            animal.id_animal.toString(),
+          );
+          return {
+            empresa_id: empresaId,
+            id_finca: lote.id_finca,
+            fecha_hora: now,
+            id_animal: animal.id_animal,
+            lote_origen_id: animal.lote_actual_id,
+            lote_destino_id: id,
+            potrero_origen_id: potreroActual ?? null,
+            potrero_destino_id: potreroActual ?? null,
+            id_motivo_movimiento: null,
+            observaciones: 'Asignacion masiva a lote',
+            created_by: null,
+          };
+        }),
       });
     });
 
@@ -245,8 +255,8 @@ export class LotesService {
       throw new NotFoundException('Lote no encontrado');
     }
 
-    const animalIds = dto.animal_ids.map((animalId) =>
-      parseBigInt(animalId, 'animal_id'),
+    const animalIds = dto.id_animal.map((animalId) =>
+      parseBigInt(animalId, 'id_animal'),
     );
 
     const animales = await this.prisma.animales.findMany({
@@ -261,28 +271,28 @@ export class LotesService {
       animales.map((animal) => [animal.id_animal.toString(), animal]),
     );
 
-    const failed: { animal_id: string; reason: string }[] = [];
+    const failed: { id_animal: string; reason: string }[] = [];
     const validAnimals: {
       id_animal: bigint;
       lote_actual_id: bigint | null;
       id_finca: bigint;
     }[] = [];
 
-    dto.animal_ids.forEach((animalId) => {
+    dto.id_animal.forEach((animalId) => {
       const animal = animalesMap.get(animalId);
       if (!animal) {
-        failed.push({ animal_id: animalId, reason: 'ANIMAL_NO_ENCONTRADO' });
+        failed.push({ id_animal: animalId, reason: 'ANIMAL_NO_ENCONTRADO' });
         return;
       }
       if (animal.id_finca !== lote.id_finca) {
         failed.push({
-          animal_id: animalId,
+          id_animal: animalId,
           reason: 'ANIMAL_FUERA_DE_FINCA',
         });
         return;
       }
       if (animal.lote_actual_id !== id) {
-        failed.push({ animal_id: animalId, reason: 'ANIMAL_NO_EN_LOTE' });
+        failed.push({ id_animal: animalId, reason: 'ANIMAL_NO_EN_LOTE' });
         return;
       }
       validAnimals.push(animal);
@@ -293,6 +303,10 @@ export class LotesService {
     }
 
     const now = new Date();
+    const potreroActualPorAnimal = await this.getPotreroActualPorAnimal(
+      empresaId,
+      validAnimals.map((animal) => animal.id_animal),
+    );
 
     await this.prisma.$transaction(async (tx) => {
       await tx.animales.updateMany({
@@ -305,19 +319,24 @@ export class LotesService {
       });
 
       await tx.movimientos_animales.createMany({
-        data: validAnimals.map((animal) => ({
-          empresa_id: empresaId,
-          id_finca: lote.id_finca,
-          fecha_hora: now,
-          id_animal: animal.id_animal,
-          lote_origen_id: id,
-          lote_destino_id: null,
-          potrero_origen_id: null,
-          potrero_destino_id: null,
-          id_motivo_movimiento: null,
-          observaciones: 'Remocion masiva de lote',
-          created_by: null,
-        })),
+        data: validAnimals.map((animal) => {
+          const potreroActual = potreroActualPorAnimal.get(
+            animal.id_animal.toString(),
+          );
+          return {
+            empresa_id: empresaId,
+            id_finca: lote.id_finca,
+            fecha_hora: now,
+            id_animal: animal.id_animal,
+            lote_origen_id: id,
+            lote_destino_id: null,
+            potrero_origen_id: potreroActual ?? null,
+            potrero_destino_id: potreroActual ?? null,
+            id_motivo_movimiento: null,
+            observaciones: 'Remocion masiva de lote',
+            created_by: null,
+          };
+        }),
       });
     });
 
@@ -380,5 +399,37 @@ export class LotesService {
       color_nombre: animal.colores_pelaje?.nombre ?? null,
       finca_nombre: animal.fincas?.nombre ?? null,
     };
+  }
+
+  private async getPotreroActualPorAnimal(
+    empresaId: bigint,
+    animalIds: bigint[],
+  ) {
+    if (!animalIds.length) {
+      return new Map<string, bigint | null>();
+    }
+
+    const rows = await this.prisma.$queryRaw<
+      { id_animal: bigint; potrero_actual_id: bigint | null }[]
+    >(Prisma.sql`
+      SELECT m.id_animal, m.potrero_destino_id as potrero_actual_id
+      FROM movimientos_animales m
+      INNER JOIN (
+        SELECT id_animal, MAX(fecha_hora) AS max_fecha
+        FROM movimientos_animales
+        WHERE empresa_id = ${empresaId}
+          AND id_animal IN (${Prisma.join(animalIds)})
+        GROUP BY id_animal
+      ) last
+        ON last.id_animal = m.id_animal AND last.max_fecha = m.fecha_hora
+      WHERE m.empresa_id = ${empresaId}
+        AND m.id_animal IN (${Prisma.join(animalIds)})
+    `);
+
+    const map = new Map<string, bigint | null>();
+    rows.forEach((row) => {
+      map.set(row.id_animal.toString(), row.potrero_actual_id);
+    });
+    return map;
   }
 }

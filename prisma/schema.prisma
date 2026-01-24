@@ -583,15 +583,14 @@ model ocupacion_potreros {
   fecha_fin    DateTime?               @db.Date
   id_lote      BigInt                  @db.UnsignedBigInt
   id_potrero   BigInt                  @db.UnsignedBigInt
-  is_active    Unsupported("tinyint")?
+  is_active    Boolean                @default(true)
   notas        String?                 @db.Text
 
   fincas   fincas   @relation(fields: [id_finca, empresa_id], references: [id_finca, empresa_id], onDelete: Cascade, map: "fk_op_finca")
   lotes    lotes    @relation(fields: [id_lote, empresa_id], references: [id_lote, empresa_id], onDelete: Cascade, map: "fk_op_lote")
   potreros potreros @relation(fields: [id_potrero, empresa_id], references: [id_potrero, empresa_id], onDelete: Cascade, map: "fk_op_potrero")
 
-  @@unique([empresa_id, id_lote, is_active], map: "uq_op_lote_activa")
-  @@unique([empresa_id, id_potrero, is_active], map: "uq_op_potrero_activa")
+  @@unique([empresa_id, id_potrero, id_lote, is_active], map: "uq_op_potrero_lote_activa")
   @@index([id_finca, empresa_id], map: "idx_op_finca")
   @@index([id_lote, empresa_id, fecha_inicio], map: "idx_op_lote")
   @@index([id_potrero, empresa_id, fecha_inicio], map: "idx_op_potrero")

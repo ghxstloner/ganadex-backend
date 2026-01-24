@@ -4,5 +4,5 @@ export class BulkAssignAnimalsDto {
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
-  animal_ids: string[];
+  id_animal: string[];
 }

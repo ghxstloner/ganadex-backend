@@ -285,6 +285,19 @@ export class AnimalesService {
       animal.animal_categorias_historial[0] ??
       null;
 
+    const movimientosRecientes = animal.movimientos_animales.map((mov) => ({
+      id: mov.id_movimiento.toString(),
+      fecha_hora: mov.fecha_hora,
+      motivo: mov.motivos_movimiento?.nombre ?? null,
+      potrero_destino:
+        mov
+          .potreros_movimientos_animales_potrero_destino_id_empresa_idTopotreros
+          ?.nombre ?? null,
+      lote_destino:
+        mov.lotes_movimientos_animales_lote_destino_id_empresa_idTolotes
+          ?.nombre ?? null,
+    }));
+
     return {
       ...this.mapAnimal(animal),
       estado_actual: estadoActual
@@ -352,18 +365,8 @@ export class AnimalesService {
             detalles: ev.detalles,
           }),
         ),
-      movimientos_recientes: animal.movimientos_animales.map((mov) => ({
-        id: mov.id_movimiento.toString(),
-        fecha_hora: mov.fecha_hora,
-        motivo: mov.motivos_movimiento?.nombre ?? null,
-        potrero_destino:
-          mov
-            .potreros_movimientos_animales_potrero_destino_id_empresa_idTopotreros
-            ?.nombre ?? null,
-        lote_destino:
-          mov.lotes_movimientos_animales_lote_destino_id_empresa_idTolotes
-            ?.nombre ?? null,
-      })),
+      movimientos_recientes: movimientosRecientes,
+      ultimos_movimientos: movimientosRecientes,
     };
   }
 

@@ -13,6 +13,7 @@ import {
 import { CreateMovimientoDto } from './dto/create-movimiento.dto';
 import { QueryMovimientoDto } from './dto/query-movimiento.dto';
 import { UpdateMovimientoDto } from './dto/update-movimiento.dto';
+import { QueryAnimalMovimientosDto } from '../animales/dto/query-animal-movimientos.dto';
 
 @Injectable()
 export class MovimientosService {
@@ -78,6 +79,123 @@ export class MovimientosService {
     return paginatedResponse(mapped, total, pagination);
   }
 
+  async findByAnimal(
+    empresaId: bigint,
+    animalId: bigint,
+    query: QueryAnimalMovimientosDto,
+  ) {
+    await this.ensureAnimalExists(empresaId, animalId);
+    const pagination = parsePaginationFromDto(query);
+    const where: Record<string, unknown> = {
+      empresa_id: empresaId,
+      id_animal: animalId,
+    };
+
+    if (query.desde || query.hasta) {
+      where.fecha_hora = {};
+      if (query.desde) {
+        (where.fecha_hora as Record<string, unknown>).gte = new Date(
+          query.desde,
+        );
+      }
+      if (query.hasta) {
+        (where.fecha_hora as Record<string, unknown>).lte = new Date(
+          query.hasta,
+        );
+      }
+    }
+
+    if (query.tipo) {
+      const tipo = query.tipo.trim().toLowerCase();
+      if (tipo === 'potrero') {
+        where.potrero_destino_id = { not: null };
+      } else if (tipo === 'lote') {
+        where.lote_destino_id = { not: null };
+      } else if (tipo === 'finca' || tipo === 'sin_destino') {
+        where.potrero_destino_id = null;
+        where.lote_destino_id = null;
+      } else {
+        throw new BadRequestException('Tipo de movimiento inválido');
+      }
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.movimientos_animales.findMany({
+        where,
+        skip: pagination.skip,
+        take: pagination.take,
+        orderBy: { fecha_hora: 'desc' },
+        include: {
+          fincas: { select: { nombre: true } },
+          motivos_movimiento: { select: { nombre: true } },
+          lotes_movimientos_animales_lote_origen_id_empresa_idTolotes: {
+            select: { nombre: true },
+          },
+          lotes_movimientos_animales_lote_destino_id_empresa_idTolotes: {
+            select: { nombre: true },
+          },
+          potreros_movimientos_animales_potrero_origen_id_empresa_idTopotreros:
+            { select: { nombre: true } },
+          potreros_movimientos_animales_potrero_destino_id_empresa_idTopotreros:
+            { select: { nombre: true } },
+        },
+      }),
+      this.prisma.movimientos_animales.count({ where }),
+    ]);
+
+    const mapped = data.map((m) => this.mapMovimiento(m));
+    return paginatedResponse(mapped, total, pagination);
+  }
+
+  async getUbicacionActual(empresaId: bigint, animalId: bigint) {
+    await this.ensureAnimalExists(empresaId, animalId);
+    const movimiento = await this.prisma.movimientos_animales.findFirst({
+      where: { empresa_id: empresaId, id_animal: animalId },
+      orderBy: { fecha_hora: 'desc' },
+      include: {
+        fincas: { select: { nombre: true } },
+        lotes_movimientos_animales_lote_destino_id_empresa_idTolotes: {
+          select: { nombre: true },
+        },
+        potreros_movimientos_animales_potrero_destino_id_empresa_idTopotreros: {
+          select: { nombre: true },
+        },
+      },
+    });
+
+    if (!movimiento) {
+      return { ubicacionActual: null };
+    }
+
+    const potreroDestino =
+      movimiento
+        .potreros_movimientos_animales_potrero_destino_id_empresa_idTopotreros;
+    const loteDestino =
+      movimiento.lotes_movimientos_animales_lote_destino_id_empresa_idTolotes;
+
+    let tipoMovimiento: string | null = null;
+    if (potreroDestino) {
+      tipoMovimiento = 'potrero';
+    } else if (loteDestino) {
+      tipoMovimiento = 'lote';
+    } else {
+      tipoMovimiento = 'sin_destino';
+    }
+
+    return {
+      ubicacionActual: {
+        fincaId: movimiento.id_finca.toString(),
+        fincaNombre: movimiento.fincas?.nombre ?? null,
+        potreroId: movimiento.potrero_destino_id?.toString() ?? null,
+        potreroNombre: potreroDestino?.nombre ?? null,
+        loteId: movimiento.lote_destino_id?.toString() ?? null,
+        loteNombre: loteDestino?.nombre ?? null,
+        fechaMovimiento: movimiento.fecha_hora,
+        tipoMovimiento,
+      },
+    };
+  }
+
   async findOne(empresaId: bigint, id: bigint) {
     const movimiento = await this.prisma.movimientos_animales.findFirst({
       where: { id_movimiento: id, empresa_id: empresaId },
@@ -112,7 +230,7 @@ export class MovimientosService {
 
     const animal = await this.prisma.animales.findFirst({
       where: { id_animal, empresa_id: empresaId },
-      select: { id_animal: true, id_finca: true, lote_actual_id: true },
+      select: { id_animal: true, id_finca: true },
     });
     if (!animal) {
       throw new NotFoundException('Animal no encontrado');
@@ -122,52 +240,215 @@ export class MovimientosService {
       throw new BadRequestException('El animal no pertenece a la finca');
     }
 
-    if (dto.lote_origen_id && animal.lote_actual_id !== null) {
-      const requestedOrigen = parseBigInt(dto.lote_origen_id, 'lote_origen_id');
-      if (animal.lote_actual_id !== requestedOrigen) {
-        throw new BadRequestException(
-          'El lote origen no coincide con el animal',
-        );
+    const ultimoMovimiento = await this.prisma.movimientos_animales.findFirst({
+      where: { empresa_id: empresaId, id_animal },
+      orderBy: { fecha_hora: 'desc' },
+      select: {
+        fecha_hora: true,
+        lote_destino_id: true,
+        potrero_destino_id: true,
+      },
+    });
+
+    const fecha_hora = new Date(dto.fecha_hora);
+    if (Number.isNaN(fecha_hora.getTime())) {
+      throw new BadRequestException('La fecha del movimiento es inválida');
+    }
+
+    if (ultimoMovimiento && fecha_hora < ultimoMovimiento.fecha_hora) {
+      throw new BadRequestException(
+        'La fecha del movimiento es anterior al último movimiento registrado',
+      );
+    }
+
+    const ubicacionActual = ultimoMovimiento
+      ? {
+          loteId: ultimoMovimiento.lote_destino_id,
+          potreroId: ultimoMovimiento.potrero_destino_id,
+        }
+      : null;
+
+    const requestedLoteOrigen =
+      dto.lote_origen_id === undefined
+        ? undefined
+        : dto.lote_origen_id === null
+          ? null
+          : parseBigInt(dto.lote_origen_id, 'lote_origen_id');
+    const requestedPotreroOrigen =
+      dto.potrero_origen_id === undefined
+        ? undefined
+        : dto.potrero_origen_id === null
+          ? null
+          : parseBigInt(dto.potrero_origen_id, 'potrero_origen_id');
+
+    const hasOrigenValue =
+      (requestedLoteOrigen !== undefined && requestedLoteOrigen !== null) ||
+      (requestedPotreroOrigen !== undefined && requestedPotreroOrigen !== null);
+
+    if (!ubicacionActual && hasOrigenValue) {
+      throw new BadRequestException(
+        'El animal no tiene ubicación previa registrada',
+      );
+    }
+
+    const lote_origen_id =
+      requestedLoteOrigen === undefined
+        ? ubicacionActual?.loteId ?? null
+        : requestedLoteOrigen;
+    const potrero_origen_id =
+      requestedPotreroOrigen === undefined
+        ? ubicacionActual?.potreroId ?? null
+        : requestedPotreroOrigen;
+
+    const origenMismatch =
+      !!ubicacionActual &&
+      (lote_origen_id !== ubicacionActual.loteId ||
+        potrero_origen_id !== ubicacionActual.potreroId);
+
+    if (
+      origenMismatch &&
+      (!dto.id_motivo_movimiento || !dto.observaciones?.trim())
+    ) {
+      throw new BadRequestException(
+        'El origen no coincide con la ubicación registrada. Debes indicar un motivo y observaciones.',
+      );
+    }
+
+    let lote_destino_id =
+      dto.lote_destino_id === undefined
+        ? undefined
+        : dto.lote_destino_id === null
+          ? null
+          : parseBigInt(dto.lote_destino_id, 'lote_destino_id');
+    let potrero_destino_id =
+      dto.potrero_destino_id === undefined
+        ? undefined
+        : dto.potrero_destino_id === null
+          ? null
+          : parseBigInt(dto.potrero_destino_id, 'potrero_destino_id');
+
+    if (lote_destino_id === undefined && potrero_destino_id === undefined) {
+      lote_destino_id = lote_origen_id;
+      potrero_destino_id = potrero_origen_id;
+    }
+
+    if (lote_destino_id === undefined && potrero_destino_id) {
+      lote_destino_id = lote_origen_id;
+    }
+    if (potrero_destino_id === undefined && lote_destino_id) {
+      potrero_destino_id = potrero_origen_id;
+    }
+
+    if (lote_destino_id === null && potrero_destino_id) {
+      lote_destino_id = lote_origen_id;
+    }
+    if (potrero_destino_id === null && lote_destino_id) {
+      potrero_destino_id = potrero_origen_id;
+    }
+
+    const salidaDefinitiva = !lote_destino_id && !potrero_destino_id;
+    if (
+      lote_origen_id === lote_destino_id &&
+      potrero_origen_id === potrero_destino_id
+    ) {
+      throw new BadRequestException('No hay ningún cambio que registrar');
+    }
+
+    if (salidaDefinitiva && !dto.id_motivo_movimiento) {
+      throw new BadRequestException(
+        'Debe especificar un motivo para una salida definitiva',
+      );
+    }
+
+    const loteIds = [lote_origen_id, lote_destino_id].filter(
+      (value): value is bigint => value !== null,
+    );
+    if (loteIds.length > 0) {
+      const lotes = await this.prisma.lotes.findMany({
+        where: { empresa_id: empresaId, id_lote: { in: loteIds } },
+        select: { id_lote: true, id_finca: true },
+      });
+
+      const lotesById = new Map(
+        lotes.map((lote) => [lote.id_lote.toString(), lote]),
+      );
+      if (lote_origen_id) {
+        const loteOrigen = lotesById.get(lote_origen_id.toString());
+        if (!loteOrigen) {
+          throw new NotFoundException('Lote origen no encontrado');
+        }
+        if (loteOrigen.id_finca !== id_finca) {
+          throw new BadRequestException(
+            'El lote origen no pertenece a la finca',
+          );
+        }
+      }
+      if (lote_destino_id) {
+        const loteDestino = lotesById.get(lote_destino_id.toString());
+        if (!loteDestino) {
+          throw new NotFoundException('Lote destino no encontrado');
+        }
+        if (loteDestino.id_finca !== id_finca) {
+          throw new BadRequestException(
+            'El lote destino no pertenece a la finca',
+          );
+        }
       }
     }
 
-    const lote_origen_id = dto.lote_origen_id
-      ? parseBigInt(dto.lote_origen_id, 'lote_origen_id')
-      : (animal.lote_actual_id ?? null);
-    const lote_destino_id = dto.lote_destino_id
-      ? parseBigInt(dto.lote_destino_id, 'lote_destino_id')
-      : null;
+    const potreroIds = [potrero_origen_id, potrero_destino_id].filter(
+      (value): value is bigint => value !== null,
+    );
+    if (potreroIds.length > 0) {
+      const potreros = await this.prisma.potreros.findMany({
+        where: { empresa_id: empresaId, id_potrero: { in: potreroIds } },
+        select: { id_potrero: true, id_finca: true },
+      });
 
-    if (!lote_destino_id) {
-      throw new BadRequestException('Debe especificar un lote de destino');
+      const potrerosById = new Map(
+        potreros.map((potrero) => [potrero.id_potrero.toString(), potrero]),
+      );
+      if (potrero_origen_id) {
+        const potreroOrigen = potrerosById.get(potrero_origen_id.toString());
+        if (!potreroOrigen) {
+          throw new NotFoundException('Potrero origen no encontrado');
+        }
+        if (potreroOrigen.id_finca !== id_finca) {
+          throw new BadRequestException(
+            'El potrero origen no pertenece a la finca',
+          );
+        }
+      }
+      if (potrero_destino_id) {
+        const potreroDestino = potrerosById.get(potrero_destino_id.toString());
+        if (!potreroDestino) {
+          throw new NotFoundException('Potrero destino no encontrado');
+        }
+        if (potreroDestino.id_finca !== id_finca) {
+          throw new BadRequestException(
+            'El potrero destino no pertenece a la finca',
+          );
+        }
+      }
     }
-
-    const loteDestino = await this.prisma.lotes.findFirst({
-      where: { id_lote: lote_destino_id, empresa_id: empresaId },
-      select: { id_lote: true, id_finca: true },
-    });
-
-    if (!loteDestino) {
-      throw new NotFoundException('Lote destino no encontrado');
-    }
-
-    if (loteDestino.id_finca !== id_finca) {
-      throw new BadRequestException('El lote destino no pertenece a la finca');
-    }
-
-    if (lote_origen_id && lote_origen_id === lote_destino_id) {
-      throw new BadRequestException('El animal ya pertenece al lote destino');
-    }
-
-    const fecha_hora = new Date(dto.fecha_hora);
 
     const movimiento = await this.prisma.$transaction(async (tx) => {
-      await tx.animales.update({
-        where: {
-          id_animal_empresa_id: { id_animal: id_animal, empresa_id: empresaId },
-        },
-        data: { lote_actual_id: lote_destino_id },
-      });
+      const updateData: { lote_actual_id?: bigint | null } = {};
+
+      if (lote_destino_id) {
+        updateData.lote_actual_id = lote_destino_id;
+      } else if (salidaDefinitiva) {
+        updateData.lote_actual_id = null;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await tx.animales.update({
+          where: {
+            id_animal_empresa_id: { id_animal: id_animal, empresa_id: empresaId },
+          },
+          data: updateData,
+        });
+      }
 
       return tx.movimientos_animales.create({
         data: {
@@ -177,8 +458,8 @@ export class MovimientosService {
           id_animal,
           lote_origen_id,
           lote_destino_id,
-          potrero_origen_id: null,
-          potrero_destino_id: null,
+          potrero_origen_id,
+          potrero_destino_id,
           id_motivo_movimiento: dto.id_motivo_movimiento
             ? parseBigInt(dto.id_motivo_movimiento, 'id_motivo_movimiento')
             : null,
@@ -618,7 +899,7 @@ export class MovimientosService {
 
   private parseAnimalIdentifier(value: string) {
     if (/^\d+$/.test(value)) {
-      return parseBigInt(value, 'animal_id');
+      return parseBigInt(value, 'id_animal');
     }
     return null;
   }
@@ -672,6 +953,7 @@ export class MovimientosService {
       observaciones: string | null;
       animales?: { id_animal: bigint; nombre: string | null };
       motivos_movimiento?: { nombre: string } | null;
+      fincas?: { nombre: string } | null;
       lotes_movimientos_animales_lote_origen_id_empresa_idTolotes?: {
         nombre: string;
       } | null;
@@ -690,6 +972,7 @@ export class MovimientosService {
       id: mov.id_movimiento.toString(),
       empresa_id: mov.empresa_id.toString(),
       id_finca: mov.id_finca.toString(),
+      finca_nombre: mov.fincas?.nombre ?? null,
       id_animal: mov.id_animal.toString(),
       animal_nombre: mov.animales?.nombre ?? null,
       fecha_hora: mov.fecha_hora,
@@ -714,5 +997,16 @@ export class MovimientosService {
       motivo_nombre: mov.motivos_movimiento?.nombre ?? null,
       observaciones: mov.observaciones,
     };
+  }
+
+  private async ensureAnimalExists(empresaId: bigint, animalId: bigint) {
+    const animal = await this.prisma.animales.findFirst({
+      where: { id_animal: animalId, empresa_id: empresaId },
+      select: { id_animal: true },
+    });
+
+    if (!animal) {
+      throw new NotFoundException('Animal no encontrado');
+    }
   }
 }

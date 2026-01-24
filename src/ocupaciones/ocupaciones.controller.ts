@@ -17,6 +17,7 @@ import { OcupacionesService } from './ocupaciones.service';
 import { CreateOcupacionDto } from './dto/create-ocupacion.dto';
 import { CloseOcupacionDto } from './dto/close-ocupacion.dto';
 import { ListOcupacionesDto } from './dto/list-ocupaciones.dto';
+import { CloseOcupacionBodyDto } from './dto/close-ocupacion-body.dto';
 
 @ApiTags('Ocupaciones')
 @ApiBearerAuth('JWT-auth')
@@ -41,6 +42,27 @@ export class OcupacionesController {
     );
   }
 
+  @Get('activas')
+  @ApiOperation({
+    summary: 'Obtener ocupaciones activas (vista por potrero o lote)',
+  })
+  async getActivas(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query('id_finca') id_finca?: string,
+    @Query('vista') vista?: string,
+  ) {
+    return this.ocupacionesService.getActivas(empresaId, id_finca, vista);
+  }
+
+  @Get('historial')
+  @ApiOperation({ summary: 'Listar historial de ocupaciones' })
+  async getHistorial(
+    @EmpresaActivaId() empresaId: bigint,
+    @Query() query: ListOcupacionesDto,
+  ) {
+    return this.ocupacionesService.getHistorial(empresaId, query);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Listar ocupaciones con paginación y filtros' })
   async findAll(
@@ -57,6 +79,24 @@ export class OcupacionesController {
     @Body() dto: CreateOcupacionDto,
   ) {
     return this.ocupacionesService.create(empresaId, dto);
+  }
+
+  @Post('asignar')
+  @ApiOperation({ summary: 'Asignar una ocupación activa' })
+  async asignar(
+    @EmpresaActivaId() empresaId: bigint,
+    @Body() dto: CreateOcupacionDto,
+  ) {
+    return this.ocupacionesService.create(empresaId, dto);
+  }
+
+  @Post('cerrar')
+  @ApiOperation({ summary: 'Cerrar una ocupación (por body)' })
+  async cerrarByBody(
+    @EmpresaActivaId() empresaId: bigint,
+    @Body() dto: CloseOcupacionBodyDto,
+  ) {
+    return this.ocupacionesService.cerrarByBody(empresaId, dto);
   }
 
   @Patch(':id/cerrar')

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseBigInt } from '../common/utils/parse-bigint';
 import {
@@ -12,6 +13,7 @@ import {
 } from '../common/utils/pagination.util';
 import { CreateOcupacionDto } from './dto/create-ocupacion.dto';
 import { CloseOcupacionDto } from './dto/close-ocupacion.dto';
+import { CloseOcupacionBodyDto } from './dto/close-ocupacion-body.dto';
 import { ListOcupacionesDto } from './dto/list-ocupaciones.dto';
 
 @Injectable()
@@ -70,6 +72,32 @@ export class OcupacionesService {
 
     const mapped = data.map((o) => this.mapOcupacion(o));
     return paginatedResponse(mapped, total, pagination);
+  }
+
+  async getHistorial(empresaId: bigint, query: ListOcupacionesDto) {
+    const where: Record<string, unknown> = { empresa_id: empresaId };
+
+    if (query.id_finca) {
+      where.id_finca = parseBigInt(query.id_finca, 'id_finca');
+    }
+    if (query.id_potrero) {
+      where.id_potrero = parseBigInt(query.id_potrero, 'id_potrero');
+    }
+    if (query.id_lote) {
+      where.id_lote = parseBigInt(query.id_lote, 'id_lote');
+    }
+
+    const ocupaciones = await this.prisma.ocupacion_potreros.findMany({
+      where,
+      orderBy: { fecha_inicio: 'desc' },
+      include: {
+        fincas: { select: { nombre: true } },
+        potreros: { select: { nombre: true } },
+        lotes: { select: { nombre: true } },
+      },
+    });
+
+    return ocupaciones.map((o) => this.mapOcupacion(o));
   }
 
   async findOne(empresaId: bigint, id: bigint) {
@@ -141,6 +169,7 @@ export class OcupacionesService {
           id_lote,
           fecha_inicio,
           fecha_fin: null,
+          is_active: true,
           notas: dto.notas ?? null,
         },
         include: {
@@ -158,14 +187,9 @@ export class OcupacionesService {
       };
       if (prismaError.code === 'P2002') {
         const target = prismaError.meta?.target ?? [];
-        if (target.includes('uq_op_lote_activa')) {
+        if (target.includes('uq_op_potrero_lote_activa')) {
           throw new ConflictException(
-            `El lote "${lote.nombre}" ya tiene una ocupación activa`,
-          );
-        }
-        if (target.includes('uq_op_potrero_activa')) {
-          throw new ConflictException(
-            `El potrero "${potrero.nombre}" ya tiene una ocupación activa`,
+            `El lote "${lote.nombre}" ya tiene una ocupación activa en este potrero`,
           );
         }
         throw new ConflictException('Ya existe una ocupación activa');
@@ -199,6 +223,7 @@ export class OcupacionesService {
       where: { id_ocupacion: id },
       data: {
         fecha_fin,
+        is_active: false,
         notas: dto.notas !== undefined ? dto.notas : ocupacion.notas,
       },
       include: {
@@ -208,7 +233,234 @@ export class OcupacionesService {
       },
     });
 
-    return this.mapOcupacion(updated);
+    const warning = await this.buildWarningAnimalesEnPotrero(
+      empresaId,
+      updated.id_potrero,
+      updated.id_lote,
+      updated.id_finca,
+    );
+
+    return {
+      ocupacion: this.mapOcupacion(updated),
+      warning,
+    };
+  }
+
+  async cerrarByBody(empresaId: bigint, dto: CloseOcupacionBodyDto) {
+    const idOcupacion = dto.id_ocupacion
+      ? parseBigInt(dto.id_ocupacion, 'id_ocupacion')
+      : null;
+    const idPotrero = dto.id_potrero
+      ? parseBigInt(dto.id_potrero, 'id_potrero')
+      : null;
+    const idLote = dto.id_lote ? parseBigInt(dto.id_lote, 'id_lote') : null;
+
+    if (!idOcupacion && (!idPotrero || !idLote)) {
+      throw new BadRequestException(
+        'Debe indicar id_ocupacion o id_potrero + id_lote',
+      );
+    }
+
+    const ocupacion = await this.prisma.ocupacion_potreros.findFirst({
+      where: {
+        empresa_id: empresaId,
+        ...(idOcupacion
+          ? { id_ocupacion: idOcupacion }
+          : {
+              id_potrero: idPotrero,
+              id_lote: idLote,
+              fecha_fin: null,
+            }),
+      },
+    });
+
+    if (!ocupacion) {
+      throw new NotFoundException('Ocupación no encontrada');
+    }
+
+    return this.cerrar(empresaId, ocupacion.id_ocupacion, {
+      fecha_fin: dto.fecha_fin,
+      notas: dto.notas,
+    });
+  }
+
+  async getActivas(empresaId: bigint, id_finca?: string, vista?: string) {
+    const view = vista?.trim().toLowerCase() ?? 'potrero';
+    if (view !== 'potrero' && view !== 'lote') {
+      throw new BadRequestException('Vista inválida');
+    }
+
+    const where: Record<string, unknown> = {
+      empresa_id: empresaId,
+      fecha_fin: null,
+      is_active: true,
+    };
+
+    const fincaId = id_finca ? parseBigInt(id_finca, 'id_finca') : null;
+    if (fincaId) {
+      where.id_finca = fincaId;
+    }
+
+    const ocupaciones = await this.prisma.ocupacion_potreros.findMany({
+      where,
+      include: {
+        fincas: { select: { nombre: true, id_finca: true } },
+        potreros: { select: { nombre: true, id_potrero: true } },
+        lotes: { select: { nombre: true, id_lote: true } },
+      },
+      orderBy: { fecha_inicio: 'asc' },
+    });
+
+    const animalesUbicacion = await this.getAnimalesUbicacionActual(
+      empresaId,
+      fincaId,
+    );
+
+    const potreroStats = new Map<
+      string,
+      {
+        total: number;
+        lotes: Map<string, number>;
+        lotesActuales: (string | null)[];
+      }
+    >();
+
+    animalesUbicacion.forEach((row) => {
+      if (!row.potrero_id) return;
+      const potreroId = row.potrero_id.toString();
+      const loteId = row.lote_actual_id ? row.lote_actual_id.toString() : null;
+
+      const stats = potreroStats.get(potreroId) ?? {
+        total: 0,
+        lotes: new Map(),
+        lotesActuales: [],
+      };
+      stats.total += 1;
+      stats.lotesActuales.push(loteId);
+      if (loteId) {
+        stats.lotes.set(loteId, (stats.lotes.get(loteId) ?? 0) + 1);
+      }
+      potreroStats.set(potreroId, stats);
+    });
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const potreroMap = new Map<
+      string,
+      {
+        potrero_id: string;
+        potrero_nombre: string;
+        finca_id: string;
+        finca_nombre: string;
+        ocupaciones: {
+          id_ocupacion: string;
+          lote_id: string;
+          lote_nombre: string;
+          fecha_inicio: Date;
+          dias: number;
+          animales_del_lote: number;
+        }[];
+      }
+    >();
+
+    ocupaciones.forEach((o) => {
+      const potreroId = o.id_potrero.toString();
+      const loteId = o.id_lote.toString();
+      const fechaInicio = new Date(o.fecha_inicio);
+      fechaInicio.setHours(0, 0, 0, 0);
+      const dias = Math.floor(
+        (hoy.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      const stats = potreroStats.get(potreroId);
+      const animales_del_lote = stats?.lotes.get(loteId) ?? 0;
+
+      const existing = potreroMap.get(potreroId) ?? {
+        potrero_id: potreroId,
+        potrero_nombre: o.potreros.nombre,
+        finca_id: o.id_finca.toString(),
+        finca_nombre: o.fincas.nombre,
+        ocupaciones: [],
+      };
+
+      existing.ocupaciones.push({
+        id_ocupacion: o.id_ocupacion.toString(),
+        lote_id: loteId,
+        lote_nombre: o.lotes.nombre,
+        fecha_inicio: o.fecha_inicio,
+        dias,
+        animales_del_lote,
+      });
+
+      potreroMap.set(potreroId, existing);
+    });
+
+    const porPotrero = Array.from(potreroMap.values()).map((potrero) => {
+      const stats = potreroStats.get(potrero.potrero_id);
+      const expectedLotes = new Set(
+        potrero.ocupaciones.map((o) => o.lote_id),
+      );
+      const mezcla_indebida =
+        stats?.lotesActuales.some(
+          (loteId) => !loteId || !expectedLotes.has(loteId),
+        ) ?? false;
+
+      return {
+        ...potrero,
+        animales_presentes: stats?.total ?? 0,
+        mezcla_indebida,
+      };
+    });
+
+    const loteMap = new Map<
+      string,
+      {
+        lote_id: string;
+        lote_nombre: string;
+        finca_id: string;
+        finca_nombre: string;
+        ocupaciones: {
+          id_ocupacion: string;
+          potrero_id: string;
+          potrero_nombre: string;
+          fecha_inicio: Date;
+          dias: number;
+          animales_del_lote: number;
+          animales_presentes: number;
+          mezcla_indebida: boolean;
+        }[];
+      }
+    >();
+
+    porPotrero.forEach((potrero) => {
+      potrero.ocupaciones.forEach((ocupacion) => {
+        const existing = loteMap.get(ocupacion.lote_id) ?? {
+          lote_id: ocupacion.lote_id,
+          lote_nombre: ocupacion.lote_nombre,
+          finca_id: potrero.finca_id,
+          finca_nombre: potrero.finca_nombre,
+          ocupaciones: [],
+        };
+
+        existing.ocupaciones.push({
+          id_ocupacion: ocupacion.id_ocupacion,
+          potrero_id: potrero.potrero_id,
+          potrero_nombre: potrero.potrero_nombre,
+          fecha_inicio: ocupacion.fecha_inicio,
+          dias: ocupacion.dias,
+          animales_del_lote: ocupacion.animales_del_lote,
+          animales_presentes: potrero.animales_presentes,
+          mezcla_indebida: potrero.mezcla_indebida,
+        });
+
+        loteMap.set(ocupacion.lote_id, existing);
+      });
+    });
+
+    return view === 'lote'
+      ? { vista: 'lote', porLote: Array.from(loteMap.values()) }
+      : { vista: 'potrero', porPotrero };
   }
 
   async getResumenActual(
@@ -300,6 +552,63 @@ export class OcupacionesService {
     };
   }
 
+  private async buildWarningAnimalesEnPotrero(
+    empresaId: bigint,
+    potreroId: bigint,
+    loteId: bigint,
+    fincaId: bigint,
+  ) {
+    const animalesUbicacion = await this.getAnimalesUbicacionActual(
+      empresaId,
+      fincaId,
+    );
+    const animalesEnPotrero = animalesUbicacion.filter(
+      (row) =>
+        row.potrero_id?.toString() === potreroId.toString() &&
+        row.lote_actual_id?.toString() === loteId.toString(),
+    );
+
+    if (!animalesEnPotrero.length) {
+      return null;
+    }
+
+    return {
+      animales_en_potrero: animalesEnPotrero.length,
+    };
+  }
+
+  private async getAnimalesUbicacionActual(
+    empresaId: bigint,
+    fincaId?: bigint | null,
+  ) {
+    const fincaFilterSub = fincaId
+      ? Prisma.sql`AND id_finca = ${fincaId}`
+      : Prisma.sql``;
+    const fincaFilterOuter = fincaId
+      ? Prisma.sql`AND m.id_finca = ${fincaId}`
+      : Prisma.sql``;
+
+    return this.prisma.$queryRaw<
+      { id_animal: bigint; potrero_id: bigint | null; lote_actual_id: bigint | null }[]
+    >(Prisma.sql`
+      SELECT m.id_animal, m.potrero_destino_id as potrero_id, a.lote_actual_id as lote_actual_id
+      FROM movimientos_animales m
+      INNER JOIN (
+        SELECT id_animal, MAX(fecha_hora) AS max_fecha
+        FROM movimientos_animales
+        WHERE empresa_id = ${empresaId}
+        ${fincaFilterSub}
+        GROUP BY id_animal
+      ) last
+        ON last.id_animal = m.id_animal AND last.max_fecha = m.fecha_hora
+      INNER JOIN animales a
+        ON a.id_animal = m.id_animal AND a.empresa_id = m.empresa_id
+      WHERE m.empresa_id = ${empresaId}
+        ${fincaFilterOuter}
+        AND m.potrero_destino_id IS NOT NULL
+    `);
+  }
+
   private mapOcupacion(o: Record<string, unknown>) {
     const ocupacion = o as {
       id_ocupacion: bigint;
@@ -309,6 +618,7 @@ export class OcupacionesService {
       id_lote: bigint;
       fecha_inicio: Date;
       fecha_fin: Date | null;
+      is_active?: boolean | null;
       notas: string | null;
       fincas?: { nombre: string };
       potreros?: { nombre: string };
@@ -326,7 +636,7 @@ export class OcupacionesService {
       lote_nombre: ocupacion.lotes?.nombre ?? null,
       fecha_inicio: ocupacion.fecha_inicio,
       fecha_fin: ocupacion.fecha_fin,
-      activo: ocupacion.fecha_fin === null,
+      activo: ocupacion.is_active ?? ocupacion.fecha_fin === null,
       notas: ocupacion.notas,
     };
   }

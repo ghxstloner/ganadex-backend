@@ -26,6 +26,7 @@ import { ParseBigIntPipe } from '../common/pipes/parse-bigint.pipe';
 import { EmpresaActivaId } from '../rbac/empresa-activa.decorator';
 import { AnimalesService } from './animales.service';
 import { IdentificacionesService } from './identificaciones/identificaciones.service';
+import { MovimientosService } from '../movimientos/movimientos.service';
 import { CreateAnimalDto } from './dto/create-animal.dto';
 import { QueryAnimalDto } from './dto/query-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
@@ -33,6 +34,7 @@ import { CreateRazaDto } from './dto/create-raza.dto';
 import { CreateColorDto } from './dto/create-color.dto';
 import { CreateCategoriaHistorialDto } from './dto/create-categoria-historial.dto';
 import { CreateEstadoHistorialDto } from './dto/create-estado-historial.dto';
+import { QueryAnimalMovimientosDto } from './dto/query-animal-movimientos.dto';
 
 @ApiTags('Animales')
 @ApiBearerAuth('JWT-auth')
@@ -42,6 +44,7 @@ export class AnimalesController {
   constructor(
     private readonly animalesService: AnimalesService,
     private readonly identificacionesService: IdentificacionesService,
+    private readonly movimientosService: MovimientosService,
   ) {}
 
   // Catálogos (rutas estáticas PRIMERO, antes de :id)
@@ -147,6 +150,25 @@ export class AnimalesController {
     @Param('id', ParseBigIntPipe) id: bigint,
   ) {
     return this.animalesService.getProfile(empresaId, id);
+  }
+
+  @Get(':id/movimientos')
+  @ApiOperation({ summary: 'Listar movimientos del animal' })
+  async getMovimientos(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Query() query: QueryAnimalMovimientosDto,
+  ) {
+    return this.movimientosService.findByAnimal(empresaId, id, query);
+  }
+
+  @Get(':id/ubicacion-actual')
+  @ApiOperation({ summary: 'Obtener ubicación actual del animal' })
+  async getUbicacionActual(
+    @EmpresaActivaId() empresaId: bigint,
+    @Param('id', ParseBigIntPipe) id: bigint,
+  ) {
+    return this.movimientosService.getUbicacionActual(empresaId, id);
   }
 
   @Patch(':id')
